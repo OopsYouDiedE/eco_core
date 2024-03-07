@@ -71,7 +71,7 @@ class CoreEconomySystem(interactions.Extension):
         database_manager.update_item(user_id, object_name, quantity)
 
         await ctx.send(f"DEBUG:将{object_name}*{quantity}给予{user_id}")
-        await ctx.send(f"DEBUG:交易后{user_id},有{database_manager.query_item(user_id, object_name)}个{object_name}")
+        await ctx.send(f"DEBUG:交易后{user_id},有{database_manager.query_item(user_id, object_name)[2]}个{object_name}")
 
     # 普通人指令：将自己的物品无条件赠送给另一个人呢
     @module_base.subcommand("send",
@@ -96,10 +96,15 @@ class CoreEconomySystem(interactions.Extension):
     )
     async def command_send_item(self, ctx: interactions.SlashContext, receiver_id: str,
                                 object_name: str, quantity: int = 1):
-        if quantity < 1: await ctx.send(f"禁止交易数量小于1")
-        sender_id = ctx.author.id
-        await ctx.send(f"{sender_id}")
+        if quantity <=0 : 
+          await ctx.send(f"禁止交易数量小于1")
+          return
+        
+        sender_id = ctx.user
         info = database_manager.query_item(sender_id, object_name)
+        if(info[2]-quantity<0):
+          await ctx.send(f"您有{info[2]}个物品，您要发送{quantity}。数量不够，无法交易。")
+          return
         database_manager.update_item(sender_id, object_name, -quantity)
         database_manager.update_item(receiver_id, object_name, quantity)
-        await ctx.send(f"交易后{sender_id},有{database_manager.query_item(sender_id, object_name)}个{object_name}")
+        await ctx.send(f"交易成功！您赠送给{receiver_id} {quantity}个 {object_name}")
