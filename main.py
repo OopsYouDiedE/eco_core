@@ -94,7 +94,7 @@ class CoreEconomySystem(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.INTEGER,
     )
-    async def command_give_item(self, ctx: interactions.SlashContext, receiver_id: str,
+    async def command_send_item(self, ctx: interactions.SlashContext, receiver_id: str,
                                 object_name: str, quantity: int = 1):
         if quantity < 1: await ctx.send(f"禁止交易数量小于1")
         sender_id = ctx.author.id
