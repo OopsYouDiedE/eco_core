@@ -17,7 +17,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import sqlite3
-import database_manager
 import interactions
 from interactions.api.events import MemberRemove, MessageCreate
 from interactions.ext.paginators import Paginator
@@ -36,9 +35,11 @@ import aiofiles.ospath
 import aiofiles.os
 import aioshutil
 from aiocsv import AsyncReader, AsyncDictReader, AsyncWriter, AsyncDictWriter
+from . import database_manager
 
 
 class CoreEconomySystem(interactions.Extension):
+    
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="core_economy_system",
         description="Minimize Core For Economy Simulation"
@@ -48,7 +49,7 @@ class CoreEconomySystem(interactions.Extension):
     @module_base.subcommand("give", sub_cmd_description="Provide a specific quantity of items to a user.")
     @interactions.check(interactions.is_owner())
     @interactions.slash_option(
-        name="id",
+        name="user_id",
         description="id of the member.",
         required=True,
         opt_type=interactions.OptionType.USER
@@ -65,9 +66,7 @@ class CoreEconomySystem(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.NUMBER,
     )
-    async def command_give_item(self, ctx: interactions.SlashContext, user_id: str, object_name: str,
-                                quantity: float = 1):
-        await ctx.send(f"DEBUG:将{object_name}*{quantity}给予{user_id}")
+    async def command_give_item(self, ctx: interactions.SlashContext, user_id: str, object_name: str, quantity: int = 1):
         await ctx.send(f"DEBUG:交易前{user_id},有{database_manager.query_item(user_id, object_name)}个{object_name}")
         database_manager.update_item(user_id, object_name, quantity)
 
