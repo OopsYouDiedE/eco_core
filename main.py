@@ -46,23 +46,23 @@ class CoreEconomySystem(interactions.Extension):
     )
 
     # 管理员指令：添加指定数量的物品给某人。
-    @module_base.subcommand("give", sub_cmd_description="Provide a specific quantity of items to a user.")
+    @module_base.subcommand("give", sub_cmd_description="直接在某人账户中添加特定数量物品。这是作弊行为。")
     @interactions.check(interactions.is_owner())
     @interactions.slash_option(
         name="user_id",
-        description="id of the member.",
+        description="接收人",
         required=True,
         opt_type=interactions.OptionType.USER
     )
     @interactions.slash_option(
         name="object_name",
-        description="Name of the object.",
+        description="物品名称",
         required=True,
         opt_type=interactions.OptionType.STRING
     )
     @interactions.slash_option(
         name="quantity",
-        description="Quantity of the object given.",
+        description="添加数量",
         required=True,
         opt_type=interactions.OptionType.NUMBER,
     )
@@ -75,22 +75,22 @@ class CoreEconomySystem(interactions.Extension):
 
     # 普通人指令：将自己的物品无条件赠送给另一个人呢
     @module_base.subcommand("send",
-                            sub_cmd_description="Transfer a specific quantity of items from you to another.")
+                            sub_cmd_description="将自己的一件物品发送给另一个人。")
     @interactions.slash_option(
         name="receiver_id",
-        description="id of the member receive items.",
+        description="接收者",
         required=True,
         opt_type=interactions.OptionType.USER
     )
     @interactions.slash_option(
         name="object_name",
-        description="Name of the object.",
+        description="物品名称",
         required=True,
         opt_type=interactions.OptionType.STRING
     )
     @interactions.slash_option(
         name="quantity",
-        description="Quantity of the object given.",
+        description="发送物品数量",
         required=True,
         opt_type=interactions.OptionType.INTEGER,
     )
