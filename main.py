@@ -39,23 +39,64 @@ from . import database_manager
 from . import market_manager
 
 
+# ID管理器类
+class IDManager:
+    def __init__(self, filename):
+        self.filename = filename
+        self.ids = self.load_ids()
+
+    # 从文件中加载ID
+    def load_ids(self):
+        try:
+            with open(self.filename, 'r') as file:
+                return set(file.read().splitlines())
+        except FileNotFoundError:
+            return set()
+
+    # 将ID保存到文件
+    def save_ids(self):
+        with open(self.filename, 'w') as file:
+            file.write('\n'.join(self.ids))
+
+    # 添加新ID
+    def add_id(self, new_id):
+        if new_id not in self.ids:
+            self.ids.add(new_id)
+            self.save_ids()
+        return f'添加id{new_id}'
+
+    # 删除ID
+    def remove_id(self, id_to_remove):
+        if id_to_remove in self.ids:
+            self.ids.remove(id_to_remove)
+            self.save_ids()
+            return f'删除id{id_to_remove}'
+        else:
+            '无此id，删除失败'
+
+
+id_manager = IDManager('ids.txt')
+
+
 class Core(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="core",
         description="Minimize Core For Economy Simulation"
     )
 
-    async def my_check(ctx: interactions.BaseContext):
+    async def administor_or_allowed_id(ctx: interactions.BaseContext):
+
         res: bool = await interactions.is_owner()(ctx)
         if os.environ.get("ROLE_ID"):
-            r: bool = ctx.author.has_role(os.environ.get("ROLE_ID"))
-            # print(os.environ.get("ROLE_ID"), type(os.environ.get("ROLE_ID")), r, ctx.author.roles)
+            if ctx.author.has_role(os.environ.get("ROLE_ID")): return True
         else:
-            r: bool = False
-        return res or r
+            if ctx.author.guild_permissions.ADMINISTRATOR: return True
+            if ctx.author.has_role(*tuple(id_manager.load_ids())): return True
+        return False
+
     # 管理员指令：添加指定数量的物品给某人。
     @module_base.subcommand("give", sub_cmd_description="直接在某人账户中添加特定数量物品。这是作弊行为。")
-    @interactions.check(my_check)
+    @interactions.check(administor_or_allowed_id)
     @interactions.slash_option(
         name="user_id",
         description="接收人",
@@ -135,7 +176,7 @@ class Core(interactions.Extension):
             await ctx.send(str(database_manager.query_item(str(ctx.user), item)))
 
     @module_base.subcommand("del_all", sub_cmd_description="删除全部数据，慎用！")
-    @interactions.check(my_check)
+    @interactions.check(administor_or_allowed_id)
     @interactions.slash_option(
         name="key",
         description="在该命令处KEY",
@@ -147,9 +188,31 @@ class Core(interactions.Extension):
         await ctx.send('您销毁了全部数据库。')
 
     @module_base.subcommand("get_all_data", sub_cmd_description="获取所有人和物品记录。")
-    @interactions.check(my_check)
-    async def del_all(self, ctx: interactions.SlashContext):
+    @interactions.check(administor_or_allowed_id)
+    async def get_all(self, ctx: interactions.SlashContext):
         await ctx.send(database_manager.get_all_records())
+
+    @module_base.subcommand("add_role", sub_cmd_description="添加管理员身份组。")
+    @interactions.check(administor_or_allowed_id)
+    @interactions.slash_option(
+        name="role_id",
+        description="身份组",
+        required=True,
+        opt_type=interactions.OptionType.ROLE
+    )
+    async def add_role(self, ctx: interactions.SlashContext, role: str):
+        await ctx.send(id_manager.add_id(str(role)))
+
+    @module_base.subcommand("del_role", sub_cmd_description="删除管理员身份组。")
+    @interactions.check(administor_or_allowed_id)
+    @interactions.slash_option(
+        name="role_id",
+        description="身份组",
+        required=True,
+        opt_type=interactions.OptionType.ROLE
+    )
+    async def add_role(self, ctx: interactions.SlashContext, role: str):
+        await ctx.send(id_manager.remove_id(str(role)))
 
 
 class Market(interactions.Extension):
@@ -198,5 +261,5 @@ class Market(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.STRING
     )
-    async def command_send_item(self, ctx: interactions.SlashContext, sell_id: str):
+    async def buy_item(self, ctx: interactions.SlashContext, sell_id: str):
         await ctx.send(f"{market_manager.buy(ctx.user, sell_id)}")
