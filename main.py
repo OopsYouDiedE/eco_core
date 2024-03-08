@@ -211,7 +211,7 @@ class Core(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.ROLE
     )
-    async def add_role(self, ctx: interactions.SlashContext, role: str):
+    async def del_role(self, ctx: interactions.SlashContext, role: str):
         await ctx.send(id_manager.remove_id(str(role)))
 
 
