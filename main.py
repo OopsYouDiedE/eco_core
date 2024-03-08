@@ -36,17 +36,26 @@ import aiofiles.os
 import aioshutil
 from aiocsv import AsyncReader, AsyncDictReader, AsyncWriter, AsyncDictWriter
 from . import database_manager
+from . import market_manager
 
 
-class CoreEconomySystem(interactions.Extension):
+class Core(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="core",
         description="Minimize Core For Economy Simulation"
     )
 
+    async def my_check(ctx: interactions.BaseContext):
+        res: bool = await interactions.is_owner()(ctx)
+        if os.environ.get("ROLE_ID"):
+            r: bool = ctx.author.has_role(os.environ.get("ROLE_ID"))
+            # print(os.environ.get("ROLE_ID"), type(os.environ.get("ROLE_ID")), r, ctx.author.roles)
+        else:
+            r: bool = False
+        return res or r
     # 管理员指令：添加指定数量的物品给某人。
     @module_base.subcommand("give", sub_cmd_description="直接在某人账户中添加特定数量物品。这是作弊行为。")
-    @interactions.check(interactions.is_owner())
+    @interactions.check(my_check)
     @interactions.slash_option(
         name="user_id",
         description="接收人",
@@ -123,10 +132,10 @@ class CoreEconomySystem(interactions.Extension):
         if item == '':
             await ctx.send(database_manager.get_items_by_uid(str(ctx.user)))
         else:
-            await ctx.send(str(database_manager.query_item(str(ctx.user),item)))
+            await ctx.send(str(database_manager.query_item(str(ctx.user), item)))
 
     @module_base.subcommand("del_all", sub_cmd_description="删除全部数据，慎用！")
-    @interactions.check(interactions.is_owner())
+    @interactions.check(my_check)
     @interactions.slash_option(
         name="key",
         description="在该命令处KEY",
@@ -138,6 +147,56 @@ class CoreEconomySystem(interactions.Extension):
         await ctx.send('您销毁了全部数据库。')
 
     @module_base.subcommand("get_all_data", sub_cmd_description="获取所有人和物品记录。")
-    @interactions.check(interactions.is_owner())
+    @interactions.check(my_check)
     async def del_all(self, ctx: interactions.SlashContext):
         await ctx.send(database_manager.get_all_records())
+
+
+class Market(interactions.Extension):
+    module_base: interactions.SlashCommand = interactions.SlashCommand(
+        name="market",
+        description="实时在线买卖您的商品！"
+    )
+
+    # 所有人指令：卖你的产品！
+    @module_base.subcommand("sell", sub_cmd_description="卖您的产品！")
+    @interactions.slash_option(
+        name="item",
+        description="产品名称",
+        required=True,
+        opt_type=interactions.OptionType.STRING
+    )
+    @interactions.slash_option(
+        name="num",
+        description="数量",
+        required=True,
+        opt_type=interactions.OptionType.INTEGER,
+    )
+    @interactions.slash_option(
+        name="exchange_item",
+        description="交换产品",
+        required=True,
+        opt_type=interactions.OptionType.STRING
+    )
+    @interactions.slash_option(
+        name="exchange_num",
+        description="数量",
+        required=True,
+        opt_type=interactions.OptionType.INTEGER,
+    )
+    async def sell_item(self, ctx: interactions.SlashContext, item: str, num: int, exchange_item: str,
+                        exchange_num: int):
+        ret_id = market_manager.sell(ctx.user, item, num, exchange_item, exchange_num)
+        await ctx.send(f"您已经提交订单，销售{item}*{num}，交换物品为{exchange_item}*{exchange_num}，销售id为\n{ret_id}")
+
+    # 普通人指令：买产品。
+    @module_base.subcommand("buy",
+                            sub_cmd_description="输入id号，买物品。")
+    @interactions.slash_option(
+        name="sell_id",
+        description="售单id",
+        required=True,
+        opt_type=interactions.OptionType.STRING
+    )
+    async def command_send_item(self, ctx: interactions.SlashContext, sell_id: str):
+        await ctx.send(f"{market_manager.buy(ctx.user, sell_id)}")
