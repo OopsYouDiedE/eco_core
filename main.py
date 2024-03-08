@@ -123,7 +123,7 @@ class CoreEconomySystem(interactions.Extension):
         if item == '':
             await ctx.send(database_manager.get_items_by_uid(str(ctx.user)))
         else:
-            await ctx.send(str(database_manager.query_item(str(ctx.user))))
+            await ctx.send(str(database_manager.query_item(str(ctx.user),item)))
 
     @module_base.subcommand("del_all", sub_cmd_description="删除全部数据，慎用！")
     @interactions.check(interactions.is_owner())
