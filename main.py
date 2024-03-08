@@ -77,6 +77,7 @@ class IDManager:
 
 id_manager = IDManager(f'{os.path.dirpath(__file__)}/ids.txt')
 
+
 class Core(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="core",
@@ -200,7 +201,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.ROLE
     )
     async def add_role(self, ctx: interactions.SlashContext, role_id: interactions.Role):
-        await ctx.send(id_manager.add_id('@'+str(role_id.id)))
+        await ctx.send(id_manager.add_id('@' + str(role_id.id)))
 
     @module_base.subcommand("del_role", sub_cmd_description="删除管理员身份组。")
     @interactions.check(administor_or_allowed_id)
@@ -211,7 +212,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.ROLE
     )
     async def del_role(self, ctx: interactions.SlashContext, role_id: interactions.Role):
-        await ctx.send(id_manager.remove_id('@'+str(role_id.id)))
+        await ctx.send(id_manager.remove_id('@' + str(role_id.id)))
 
 
 class Market(interactions.Extension):
@@ -262,3 +263,39 @@ class Market(interactions.Extension):
     )
     async def buy_item(self, ctx: interactions.SlashContext, sell_id: str):
         await ctx.send(f"{market_manager.buy(ctx.user, sell_id)}")
+
+
+class Work(interactions.Extension):
+    module_base: interactions.SlashCommand = interactions.SlashCommand(
+        name="work",
+        description="实时在线买卖您的商品！"
+    )
+
+    # 所有人指令：卖你的产品！
+    @module_base.subcommand("check in", sub_cmd_description="获得你的点赞和劳动券！")
+    @interactions.cooldown(interactions.Buckets.USER, 1, 15 * 60 * 60)
+    async def check_in(self, ctx: interactions.SlashContext):
+        database_manager.update_item(ctx.user, '劳动券', 3)
+        database_manager.update_item(ctx.user, '点赞', 3)
+        await ctx.send(f"您获得劳动券和点赞！")
+
+    # Error handling for the cooldown
+    # 普通人指令：买产品。
+    @module_base.subcommand("like",
+                            sub_cmd_description="给你喜欢的人一个赞。")
+    @interactions.slash_option(
+        name="user_id",
+        description="给他点赞",
+        required=True,
+        opt_type=interactions.OptionType.USER
+    )
+    async def like_sb(self, ctx: interactions.SlashContext,user_id:interactions.User):
+        database_manager.update_item(ctx.user, '劳动券', 3)
+        info = database_manager.query_item(ctx.user, '点赞')
+        if info[2] - 1 < 0:
+            await ctx.send(f"您没有点赞。通过签到获得。")
+            return
+        else:
+            database_manager.update_item(ctx.user, '点赞', -1)
+            database_manager.update_item(user_id, '赞许', 1)
+            await ctx.send(f"{user_id}收获了您的赞许！")
