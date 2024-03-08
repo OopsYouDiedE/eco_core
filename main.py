@@ -39,9 +39,8 @@ from . import database_manager
 
 
 class CoreEconomySystem(interactions.Extension):
-    
     module_base: interactions.SlashCommand = interactions.SlashCommand(
-        name="core_economy_system",
+        name="core",
         description="Minimize Core For Economy Simulation"
     )
 
@@ -66,7 +65,8 @@ class CoreEconomySystem(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.NUMBER,
     )
-    async def command_give_item(self, ctx: interactions.SlashContext, user_id: str, object_name: str, quantity: int = 1):
+    async def command_give_item(self, ctx: interactions.SlashContext, user_id: str, object_name: str,
+                                quantity: int = 1):
         await ctx.send(f"DEBUG:交易前{user_id},有{database_manager.query_item(user_id, object_name)}个{object_name}")
         database_manager.update_item(user_id, object_name, quantity)
 
@@ -96,15 +96,48 @@ class CoreEconomySystem(interactions.Extension):
     )
     async def command_send_item(self, ctx: interactions.SlashContext, receiver_id: str,
                                 object_name: str, quantity: int = 1):
-        if quantity <=0 : 
-          await ctx.send(f"禁止交易数量小于1")
-          return
-        
+        if quantity <= 0:
+            await ctx.send(f"禁止交易数量小于1")
+            return
+
         sender_id = ctx.user
         info = database_manager.query_item(sender_id, object_name)
-        if(info[2]-quantity<0):
-          await ctx.send(f"您有{info[2]}个物品，您要发送{quantity}。数量不够，无法交易。")
-          return
+        if info[2] - quantity < 0:
+            await ctx.send(f"您有{info[2]}个物品，您要发送{quantity}。数量不够，无法交易。")
+            return
         database_manager.update_item(sender_id, object_name, -quantity)
         database_manager.update_item(receiver_id, object_name, quantity)
         await ctx.send(f"交易成功！您赠送给{receiver_id} {quantity}个 {object_name}")
+
+        # 普通人指令：查看自己全部物品数量
+
+    @module_base.subcommand("show_item",
+                            sub_cmd_description="显示自己某件物品或全部物品数量。")
+    @interactions.slash_option(
+        name="item",
+        description="查看的特定物品，不填则为查看全部物品。",
+        required=False,
+        opt_type=interactions.OptionType.STRING
+    )
+    async def command_check_item(self, ctx: interactions.SlashContext, item: str = ''):
+        if item == '':
+            await ctx.send(database_manager.get_items_by_uid(str(ctx.user)))
+        else:
+            await ctx.send(str(database_manager.query_item(str(ctx.user))))
+
+    @module_base.subcommand("del_all", sub_cmd_description="删除全部数据，慎用！")
+    @interactions.check(interactions.is_owner())
+    @interactions.slash_option(
+        name="key",
+        description="在该命令处KEY",
+        required=True,
+        opt_type=interactions.OptionType.STRING
+    )
+    async def del_all(self, ctx: interactions.SlashContext, key: str):
+        if key == '%DEL_ALL': database_manager.delete_all_data()
+        await ctx.send('您销毁了全部数据库。')
+
+    @module_base.subcommand("get_all_data", sub_cmd_description="获取所有人和物品记录。")
+    @interactions.check(interactions.is_owner())
+    async def del_all(self, ctx: interactions.SlashContext):
+        await ctx.send(database_manager.get_all_records())

@@ -67,3 +67,30 @@ def query_item(user_id, item):
   result = cur.fetchone()
   if result: return result
   else: return (uid, item, 0)
+
+def get_items_by_uid(uid:str):
+    uid=str(uid)
+    # 查询指定uid的所有非零数量物品
+    cur.execute('SELECT item, quantity FROM items WHERE uid = ? AND quantity > 0', (uid,))
+
+    # 获取查询结果
+    items = cur.fetchall()
+    return str(items)
+def delete_all_data():
+    # 连接到数据库
+    conn = sqlite3.connect('core.db')
+    cur = conn.cursor()
+
+    # 删除所有数据
+    cur.execute('DELETE FROM items')
+def get_all_records():
+    # 连接到数据库
+    conn = sqlite3.connect('core.db')
+    cur = conn.cursor()
+
+    # 查询所有记录
+    cur.execute('SELECT * FROM items')
+
+    # 获取查询结果
+    records = cur.fetchall()
+    return str(records)
