@@ -75,8 +75,7 @@ class IDManager:
             '无此id，删除失败'
 
 
-id_manager = IDManager('ids.txt')
-
+id_manager = IDManager(f'{os.path.dirpath(__file__)}/ids.txt')
 
 class Core(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
