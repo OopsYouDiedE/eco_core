@@ -268,7 +268,7 @@ class Market(interactions.Extension):
 class Work(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="work",
-        description="实时在线买卖您的商品！"
+        description="签到了，点赞了！"
     )
 
     # 所有人指令：卖你的产品！
@@ -279,6 +279,7 @@ class Work(interactions.Extension):
         database_manager.update_item(ctx.user, '点赞', 3)
         await ctx.send(f"您获得劳动券和点赞！")
 
+    # 检查冷却时间
     # Error handling for the cooldown
     # 普通人指令：买产品。
     @module_base.subcommand("like",
