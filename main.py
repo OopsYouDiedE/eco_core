@@ -201,7 +201,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.ROLE
     )
     async def add_role(self, ctx: interactions.SlashContext, role_id: str):
-        await ctx.send(id_manager.add_id(str(role)))
+        await ctx.send(id_manager.add_id(str(role_id)))
 
     @module_base.subcommand("del_role", sub_cmd_description="删除管理员身份组。")
     @interactions.check(administor_or_allowed_id)
@@ -212,7 +212,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.ROLE
     )
     async def del_role(self, ctx: interactions.SlashContext, role_id: str):
-        await ctx.send(id_manager.remove_id(str(role)))
+        await ctx.send(id_manager.remove_id(str(role_id)))
 
 
 class Market(interactions.Extension):
