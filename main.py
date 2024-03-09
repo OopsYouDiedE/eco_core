@@ -16,25 +16,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import sqlite3
-import interactions
-from interactions.api.events import MemberRemove, MessageCreate
-from interactions.ext.paginators import Paginator
-from collections import deque
-import asyncio
-import datetime
-from config import DEV_GUILD
-from typing import Optional, Union
-import tempfile
 import os
-import asyncio
-import csv
 
-import aiofiles
-import aiofiles.ospath
-import aiofiles.os
-import aioshutil
-from aiocsv import AsyncReader, AsyncDictReader, AsyncWriter, AsyncDictWriter
+import interactions
+
 from . import database_manager
 from . import market_manager
 
@@ -300,6 +285,7 @@ class Work(interactions.Extension):
             database_manager.update_item(ctx.user, '点赞', -1)
             database_manager.update_item(user_id, '赞许', 1)
             await ctx.send(f"{user_id}收获了您的赞许！")
+
 
 """
 class GamblingManager(interactions.Extension):
