@@ -16,10 +16,25 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import os
-
+import sqlite3
 import interactions
+from interactions.api.events import MemberRemove, MessageCreate
+from interactions.ext.paginators import Paginator
+from collections import deque
+import asyncio
+import datetime
+from config import DEV_GUILD
+from typing import Optional, Union
+import tempfile
+import os
+import asyncio
+import csv
 
+import aiofiles
+import aiofiles.ospath
+import aiofiles.os
+import aioshutil
+from aiocsv import AsyncReader, AsyncDictReader, AsyncWriter, AsyncDictWriter
 from . import database_manager
 from . import market_manager
 
@@ -57,7 +72,7 @@ class IDManager:
             self.save_ids()
             return f'删除id{id_to_remove}'
         else:
-            '无此id，删除失败'
+            return '无此id，删除失败'
 
 
 async def administer_or_allowed_id(ctx: interactions.BaseContext):
@@ -76,7 +91,7 @@ id_manager = IDManager(f'{os.path.dirname(__file__)}/ids.txt')
 class Core(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="core",
-        description="最核心的管理内容"
+        description="Minimize Core For Economy Simulation"
     )
 
     # 管理员指令：添加指定数量的物品给某人。
@@ -285,57 +300,3 @@ class Work(interactions.Extension):
             database_manager.update_item(ctx.user, '点赞', -1)
             database_manager.update_item(user_id, '赞许', 1)
             await ctx.send(f"{user_id}收获了您的赞许！")
-
-
-"""
-class GamblingManager(interactions.Extension):
-    module_base: interactions.SlashCommand = interactions.SlashCommand(
-        name="gambling",
-        description="赌王，赌神，赌圣！"
-    )
-
-    # 单人赌博：包括，赌大小，赌幸运数字
-    # 多人赌博：包括大乐透票券，以及现实事件票券。
-    # 所有人指令：卖你的产品！
-    @module_base.subcommand("banker", sub_cmd_description="卖您的赌博产品！注意，1.0或更高的赔率可能会更吸引人。")
-    @interactions.slash_option(
-        name="item",
-        description="产品名称。",
-        required=True,
-        opt_type=interactions.OptionType.STRING
-    )
-    @interactions.slash_option(
-        name="chip",
-        description="筹码",
-        required=True,
-        opt_type=interactions.OptionType.INTEGER,
-    )
-    @interactions.slash_option(
-        name="quantity",
-        description="你的筹码数量",
-        required=True,
-        opt_type=interactions.OptionType.STRING
-    )
-    @interactions.slash_option(
-        name="odds",
-        description="赔率，100为不赔不赚。",
-        required=True,
-        opt_type=interactions.OptionType.INTEGER,
-    )
-    async def banker(self, ctx: interactions.SlashContext, item: str, chip: str, quantity: int,
-                     odds: int):
-        ret_id = market_manager.sell(ctx.user, item, num, exchange_item, exchange_num)
-        await ctx.send(f"您已经提交订单，销售{item}*{num}，交换物品为{exchange_item}*{exchange_num}，销售id为\n{ret_id}")
-
-    # 普通人指令：买产品。
-    @module_base.subcommand("buy",
-                            sub_cmd_description="输入id号，买物品。")
-    @interactions.slash_option(
-        name="sell_id",
-        description="售单id",
-        required=True,
-        opt_type=interactions.OptionType.STRING
-    )
-    async def buy_item(self, ctx: interactions.SlashContext, sell_id: str):
-        await ctx.send(f"{market_manager.buy(ctx.user, sell_id)}")
-"""
