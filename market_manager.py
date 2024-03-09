@@ -28,7 +28,7 @@ def sell(seller_id, item, quantity, exchange_item, exchange_quantity):
   """卖家使用此函数来发布销售信息"""
   seller_id = str(seller_id)  # 确保ID是字符串
   # 生成一个随机ID
-  sale_id = str(randint(1000, sys.maxsize))
+  sale_id = str(randint(0, sys.maxsize))
   # 将销售信息插入到数据库
   cursor.execute(
       '''
