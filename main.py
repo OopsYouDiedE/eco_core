@@ -75,7 +75,17 @@ class IDManager:
             '无此id，删除失败'
 
 
-id_manager = IDManager(f'{os.path.dirpath(__file__)}/ids.txt')
+async def administer_or_allowed_id(ctx: interactions.BaseContext):
+    res: bool = await interactions.is_owner()(ctx)
+    if os.environ.get("ROLE_ID"):
+        if ctx.author.has_role(os.environ.get("ROLE_ID")): return True
+    else:
+        if ctx.author.guild_permissions.ADMINISTRATOR: return True
+        if ctx.author.has_role(*tuple(id_manager.load_ids())): return True
+    return False
+
+
+id_manager = IDManager(f'{os.path.dirname(__file__)}/ids.txt')
 
 
 class Core(interactions.Extension):
@@ -84,19 +94,9 @@ class Core(interactions.Extension):
         description="Minimize Core For Economy Simulation"
     )
 
-    async def administor_or_allowed_id(ctx: interactions.BaseContext):
-
-        res: bool = await interactions.is_owner()(ctx)
-        if os.environ.get("ROLE_ID"):
-            if ctx.author.has_role(os.environ.get("ROLE_ID")): return True
-        else:
-            if ctx.author.guild_permissions.ADMINISTRATOR: return True
-            if ctx.author.has_role(*tuple(id_manager.load_ids())): return True
-        return False
-
     # 管理员指令：添加指定数量的物品给某人。
     @module_base.subcommand("give", sub_cmd_description="直接在某人账户中添加特定数量物品。这是作弊行为。")
-    @interactions.check(administor_or_allowed_id)
+    @interactions.check(administer_or_allowed_id)
     @interactions.slash_option(
         name="user_id",
         description="接收人",
@@ -176,7 +176,7 @@ class Core(interactions.Extension):
             await ctx.send(str(database_manager.query_item(str(ctx.user), item)))
 
     @module_base.subcommand("del_all", sub_cmd_description="删除全部数据，慎用！")
-    @interactions.check(administor_or_allowed_id)
+    @interactions.check(administer_or_allowed_id)
     @interactions.slash_option(
         name="key",
         description="在该命令处KEY",
@@ -188,12 +188,12 @@ class Core(interactions.Extension):
         await ctx.send('您销毁了全部数据库。')
 
     @module_base.subcommand("get_all_data", sub_cmd_description="获取所有人和物品记录。")
-    @interactions.check(administor_or_allowed_id)
+    @interactions.check(administer_or_allowed_id)
     async def get_all(self, ctx: interactions.SlashContext):
         await ctx.send(database_manager.get_all_records())
 
     @module_base.subcommand("add_role", sub_cmd_description="添加管理员身份组。")
-    @interactions.check(administor_or_allowed_id)
+    @interactions.check(administer_or_allowed_id)
     @interactions.slash_option(
         name="role_id",
         description="身份组",
@@ -204,7 +204,7 @@ class Core(interactions.Extension):
         await ctx.send(id_manager.add_id('@' + str(role_id.id)))
 
     @module_base.subcommand("del_role", sub_cmd_description="删除管理员身份组。")
-    @interactions.check(administor_or_allowed_id)
+    @interactions.check(administer_or_allowed_id)
     @interactions.slash_option(
         name="role_id",
         description="身份组",
@@ -290,7 +290,7 @@ class Work(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.USER
     )
-    async def like_sb(self, ctx: interactions.SlashContext,user_id:interactions.User):
+    async def like_sb(self, ctx: interactions.SlashContext, user_id: interactions.User):
         database_manager.update_item(ctx.user, '劳动券', 3)
         info = database_manager.query_item(ctx.user, '点赞')
         if info[2] - 1 < 0:
