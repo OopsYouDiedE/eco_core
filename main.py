@@ -272,7 +272,7 @@ class Work(interactions.Extension):
     )
 
     # 所有人指令：卖你的产品！
-    @module_base.subcommand("check in", sub_cmd_description="获得你的点赞和劳动券！")
+    @module_base.subcommand("check_in", sub_cmd_description="获得你的点赞和劳动券！")
     @interactions.cooldown(interactions.Buckets.USER, 1, 15 * 60 * 60)
     async def check_in(self, ctx: interactions.SlashContext):
         database_manager.update_item(ctx.user, '劳动券', 3)
