@@ -184,8 +184,11 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.STRING
     )
     async def del_all(self, ctx: interactions.SlashContext, key: str):
-        if key == '%DEL_ALL': database_manager.delete_all_data()
-        await ctx.send('您销毁了全部数据库。')
+        if key == '%DEL_ALL': 
+            database_manager.delete_all_data()
+            await ctx.send('您销毁了全部数据库。')
+        else:
+            await ctx.send('key错误。这个key在该代码执行处查看。')
 
     @module_base.subcommand("get_all_data", sub_cmd_description="获取所有人和物品记录。")
     @interactions.check(administer_or_allowed_id)
