@@ -20,10 +20,8 @@ import os
 import random
 
 import interactions
-
-from utils import IDManager, KeyValueManager
 from . import database_manager
-
+from .utils import IDManager,KeyValueManager
 '''
 The DEV_GUILD must be set to a specific guild_id
 '''
