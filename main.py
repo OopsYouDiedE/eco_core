@@ -20,8 +20,10 @@ import os
 import random
 
 import interactions
+import yaml
+
 from . import database_manager
-from .utils import IDManager,KeyValueManager
+
 '''
 The DEV_GUILD must be set to a specific guild_id
 '''
@@ -37,8 +39,75 @@ async def administer_or_allowed_id(ctx: interactions.BaseContext):
     return False
 
 
+class IDManager:
+    def __init__(self, filename):
+        self.filename = filename
+        self.ids = self.load_ids()
+
+    # 从文件中加载ID
+    def load_ids(self):
+        try:
+            with open(self.filename, 'r') as file:
+                return set(file.read().splitlines())
+        except FileNotFoundError:
+            return set()
+
+    # 将ID保存到文件
+    def save_ids(self):
+        with open(self.filename, 'w') as file:
+            file.write('\n'.join(self.ids))
+
+    # 添加新ID
+    def add_id(self, new_id):
+        if new_id not in self.ids:
+            self.ids.add(new_id)
+            self.save_ids()
+        return f'添加id{new_id}'
+
+    # 删除ID
+    def remove_id(self, id_to_remove):
+        if id_to_remove in self.ids:
+            self.ids.remove(id_to_remove)
+            self.save_ids()
+            return f'删除id{id_to_remove}'
+        else:
+            return '无此id，删除失败'
+
+
 id_manager = IDManager(f'{os.path.dirname(__file__)}/ids.txt')
 exchangeable_item = IDManager(f'{os.path.dirname(__file__)}/exchangeable_item.txt')
+
+
+class KeyValueManager:
+    def __init__(self, file_path='data.yaml'):
+        self.file_path = file_path
+        self.data = {}
+        self.data = self.load_dict()
+
+    def load_dict(self):
+        try:
+            with open(self.file_path, 'r') as f:
+                return yaml.safe_load(f)
+        except:
+            self.save_dict()
+            return self.data
+
+    def save_dict(self):
+        with open(self.file_path, 'w') as f:
+            yaml.dump(self.data, f)
+
+    def add_kv(self, key, value):
+        self.data[key] = value
+        self.save_dict()
+
+    def remove_kv(self, key):
+        if key in self.data:
+            del self.data[key]
+            self.save_dict()
+        else:
+            print("Key not found")
+
+
 coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.yaml')
 market_manager = KeyValueManager(f'{os.path.dirname(__file__)}/market_manager.yaml')
 exchangeable_item.add_id('劳动券')
@@ -93,7 +162,7 @@ class Core(interactions.Extension):
         description="发送物品",
         required=True,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=False
+        autocomplete=True
     )
     @interactions.slash_option(
         name="quantity",
@@ -125,7 +194,7 @@ class Core(interactions.Extension):
         description="查看的特定物品，不填则为查看全部物品。",
         required=False,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=False
+        autocomplete=True
     )
     async def command_check_item(self, ctx: interactions.SlashContext, items: str = ''):
         if items == '':
@@ -176,20 +245,20 @@ class Core(interactions.Extension):
         await ctx.send(id_manager.remove_id('@' + str(role_id.id)))
 
 
-"""class Market(interactions.Extension):
+class Market(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="market",
         description="实时在线买卖您的商品！"
     )
 
-    # 交易流程：每个人可以发送一个订单，这个订单是交易唯一凭证
-    @module_base.subcommand("sell", sub_cmd_description="卖出您的商品！。")
+    # 交易流程：每个人可以发送一个订单。订单包括：名称，售卖物品，单位数量，交换物品，单位数量，售卖单数。
+    @module_base.subcommand("sell", sub_cmd_description="卖出您的商品！花费一个交易券，来填写你的售卖单。")
     @interactions.slash_option(
         name="item",
         description="产品名称",
         required=True,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=False
+        autocomplete=True
     )
     @interactions.slash_option(
         name="num",
@@ -206,7 +275,7 @@ class Core(interactions.Extension):
     )
     @interactions.slash_option(
         name="exchange_num",
-        description="数量",
+        description="交换数量",
         required=True,
         opt_type=interactions.OptionType.INTEGER,
     )
@@ -217,21 +286,55 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.INTEGER,
     )
     async def sell_item(self, ctx: interactions.SlashContext, item: str, num: int, exchange_item: str,
-                        exchange_num: int):
-        ret_id = market_manager.add_kv()
-        await ctx.send(f"您已经提交订单，销售{item}*{num}，交换物品为{exchange_item}*{exchange_num}，销售id为\n{ret_id}")
+                        exchange_num: int, max_count: int):
+        if database_manager.query_item(ctx.user, '交易券')[2] < 1:
+            await ctx.send("请先获取一个交易券。")
+            return
+        database_manager.update_item(ctx.user, "交易券", -1)
+
+        k = (str(ctx.user), item, num, exchange_item, exchange_num)
+        market_manager.add_kv(str(k), [k, max_count])
+        await ctx.send(f"您已经提交订单，以下是该订单的编号。\n{str(k)}")
 
     # 普通人指令：买产品。
     @module_base.subcommand("buy",
-                            sub_cmd_description="输入id号，买物品。")
+                            sub_cmd_description="输入编号，买物品。有自动补全。")
     @interactions.slash_option(
         name="sell_id",
         description="售单id",
         required=True,
-        opt_type=interactions.OptionType.STRING
+        opt_type=interactions.OptionType.STRING,
+        autocomplete=True
     )
-    async def buy_item(self, ctx: interactions.SlashContext, sell_id: str):
-        await ctx.send(f"{market_manager.buy(ctx.user, sell_id)}")"""
+    @interactions.slash_option(
+        name="multiple",
+        description="交易多少单",
+        required=True,
+        opt_type=interactions.OptionType.INTEGER,
+    )
+    async def buy_item(self, ctx: interactions.SlashContext, sell_id: str, multiple: int):
+        try:
+            seller_id, item, num, exchange_item, exchange_num = market_manager.data[sell_id][0]
+        except:
+            await ctx.send("查无此单")
+            return
+        if multiple <= 0:
+            await ctx.send(f"必须大于零")
+            return
+        if market_manager.data[sell_id][1] < multiple:
+            await ctx.send(f"卖家单数不足，只能成交{market_manager.data[sell_id][1]}单。")
+            multiple = market_manager.data[sell_id][1]
+        sell_num = multiple * num
+        buy_num = multiple * exchange_item
+        if database_manager.query_item(seller_id, item)[2] < sell_num or \
+                database_manager.query_item(ctx.user, exchange_item)[2] < buy_num:
+            await ctx.send("物品不足，无法交易。")
+            return
+        database_manager.update_item(seller_id, item, -sell_num)
+        database_manager.update_item(ctx.user, exchange_item, -buy_num)
+        database_manager.update_item(ctx.user, item, sell_num)
+        database_manager.update_item(seller_id, exchange_item, buy_num)
+        await ctx.send("交易成功！祝您下次交易愉快！")
 
 
 class Work(interactions.Extension):
@@ -248,8 +351,6 @@ class Work(interactions.Extension):
         database_manager.update_item(ctx.user, '点赞', 3)
         await ctx.send(f"您获得劳动券和点赞！")
 
-    # 检查冷却时间
-    # Error handling for the cooldown
     # 普通人指令：买产品。
     @module_base.subcommand("like",
                             sub_cmd_description="给你喜欢的人一个赞。")
@@ -374,27 +475,6 @@ class Gambling(interactions.Extension):
     @module_base.subcommand("risk_work", sub_cmd_description="看看你的运气，能不能获得更多劳动券！放心，期望是比一高的。")
     @interactions.cooldown(interactions.Buckets.USER, 1, 3 * 60 * 60)
     async def risk_work(self, ctx: interactions.SlashContext):
-        # 该命令期望为1.1>1，冷却三小时。构成为 0.3*0+0.4*1+0.2*2+0.1*3=0.4+0.4+0.3
-        if database_manager.query_item(ctx.user, '劳动券')[2] < 3:
-            await ctx.send(f"劳动券不足三个，下次再来吧！")
-
-        database_manager.update_item(ctx.user, '劳动券', -3)
-        luck = random.random()
-        if luck < 0.3:
-            await ctx.send(f"看起来运气有点差，3个劳动券没了~下次或许能捞回来哦~")
-        elif luck < 0.7:
-            database_manager.update_item(ctx.user, '劳动券', 3)
-            await ctx.send(f"嘿咻！看起来，你的劳动券没有变多，也没有变少。")
-
-        elif luck < 0.9:
-            database_manager.update_item(ctx.user, '劳动券', 6)
-            await ctx.send(f"你的运气挺好啊，劳动券翻倍了！")
-        elif luck < 0.9:
-            database_manager.update_item(ctx.user, '劳动券', 9)
-            await ctx.send(f"头奖！你的劳动券翻两番！快去好好炫耀一下吧！")
-
-    @module_base.subcommand("risk_work", sub_cmd_description="看看你的运气，能不能获得更多劳动券！放心，期望是比一高的。")
-    async def sell_your_gambling(self, ctx: interactions.SlashContext):
         # 该命令期望为1.1>1，冷却三小时。构成为 0.3*0+0.4*1+0.2*2+0.1*3=0.4+0.4+0.3
         if database_manager.query_item(ctx.user, '劳动券')[2] < 3:
             await ctx.send(f"劳动券不足三个，下次再来吧！")
