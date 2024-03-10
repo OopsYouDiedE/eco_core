@@ -333,6 +333,7 @@ class Market(interactions.Extension):
                 database_manager.query_item(ctx.user, exchange_item)[2] < buy_num:
             await ctx.send("物品不足，无法交易。")
             return
+        market_manager.data[sell_id][1]-=multiple
         database_manager.update_item(seller_id, item, -sell_num)
         database_manager.update_item(ctx.user, exchange_item, -buy_num)
         database_manager.update_item(ctx.user, item, sell_num)
