@@ -35,6 +35,26 @@ import aiofiles.ospath
 import aiofiles.os
 import aioshutil
 from aiocsv import AsyncReader, AsyncDictReader, AsyncWriter, AsyncDictWriter
+import asyncio
+import aiofiles
+import os
+import sys
+import pathlib
+import tempfile
+
+import interactions
+from interactions.ext import prefixed_commands
+from interactions.ext.prefixed_commands import prefixed_command, PrefixedContext
+from dotenv import load_dotenv
+
+'''
+The DEV_GUILD must be set to a specific guild_id
+'''
+from config import DEBUG, DEV_GUILD
+from src import logutil, compressutil, moduleutil
+
+from typing import Union
+import main
 from . import database_manager
 from . import market_manager
 
@@ -122,6 +142,28 @@ exchangeable_item = IDManager(f'{os.path.dirname(__file__)}/exchangeable_item.tx
 coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.yaml')
 
 exchangeable_item.add_id('劳动券')
+from interactions import AutocompleteContext
+
+
+@main.Core.command_send_item.autocomplete('item')
+@main.Core.command_check_item.autocomplete('item')
+@main.Market.sell_item.autocomplete('item')
+@main.Market.sell_item.autocomplete('exchange_item')
+async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext):
+    items_option_input: str = ctx.input_text
+    modules: list[str] = list(exchangeable_item.ids)
+    modules_auto: list[str] = [
+        i for i in modules if items_option_input in i
+    ]
+
+    await ctx.send(
+        choices=[
+            {
+                "name": i,
+                "value": i,
+            } for i in modules_auto
+        ]
+    )
 
 
 class Core(interactions.Extension):
@@ -140,10 +182,10 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.USER
     )
     @interactions.slash_option(
-        name="object_name",
-        description="物品名称",
+        name="item",
+        description="物品名",
         required=True,
-        opt_type=interactions.OptionType.STRING
+        opt_type=interactions.OptionType.STRING,
     )
     @interactions.slash_option(
         name="quantity",
@@ -151,13 +193,13 @@ class Core(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.NUMBER,
     )
-    async def command_give_item(self, ctx: interactions.SlashContext, user_id: str, object_name: str,
+    async def command_give_item(self, ctx: interactions.SlashContext, user_id: str, item: str,
                                 quantity: int = 1):
-        await ctx.send(f"DEBUG:交易前{user_id},有{database_manager.query_item(user_id, object_name)}个{object_name}")
-        database_manager.update_item(user_id, object_name, quantity)
+        await ctx.send(f"DEBUG:交易前{user_id},有{database_manager.query_item(user_id, item)}个{item}")
+        database_manager.update_item(user_id, item, quantity)
 
-        await ctx.send(f"DEBUG:将{object_name}*{quantity}给予{user_id}")
-        await ctx.send(f"DEBUG:交易后{user_id},有{database_manager.query_item(user_id, object_name)[2]}个{object_name}")
+        await ctx.send(f"DEBUG:将{item}*{quantity}给予{user_id}")
+        await ctx.send(f"DEBUG:交易后{user_id},有{database_manager.query_item(user_id, item)[2]}个{item}")
 
     # 普通人指令：将自己的物品无条件赠送给另一个人呢
     @module_base.subcommand("send",
@@ -169,10 +211,11 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.USER
     )
     @interactions.slash_option(
-        name="object_name",
-        description="物品名称",
-        required=True,
-        opt_type=interactions.OptionType.STRING
+        name="item",
+        description="发送物品",
+        required=False,
+        opt_type=interactions.OptionType.STRING,
+        autocomplete=True
     )
     @interactions.slash_option(
         name="quantity",
@@ -181,35 +224,36 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.INTEGER,
     )
     async def command_send_item(self, ctx: interactions.SlashContext, receiver_id: str,
-                                object_name: str, quantity: int = 1):
+                                item: str, quantity: int = 1):
         if quantity <= 0:
             await ctx.send(f"禁止交易数量小于1")
             return
 
         sender_id = ctx.user
-        info = database_manager.query_item(sender_id, object_name)
+        info = database_manager.query_item(sender_id, item)
         if info[2] - quantity < 0:
             await ctx.send(f"您有{info[2]}个物品，您要发送{quantity}。数量不够，无法交易。")
             return
-        database_manager.update_item(sender_id, object_name, -quantity)
-        database_manager.update_item(receiver_id, object_name, quantity)
-        await ctx.send(f"交易成功！您赠送给{receiver_id} {quantity}个 {object_name}")
+        database_manager.update_item(sender_id, item, -quantity)
+        database_manager.update_item(receiver_id, item, quantity)
+        await ctx.send(f"交易成功！您赠送给{receiver_id} {quantity}个 {item}")
 
         # 普通人指令：查看自己全部物品数量
 
     @module_base.subcommand("show_item",
                             sub_cmd_description="显示自己某件物品或全部物品数量。")
     @interactions.slash_option(
-        name="item",
+        name="items",
         description="查看的特定物品，不填则为查看全部物品。",
         required=False,
-        opt_type=interactions.OptionType.STRING
+        opt_type=interactions.OptionType.STRING,
+        autocomplete=True
     )
-    async def command_check_item(self, ctx: interactions.SlashContext, item: str = ''):
-        if item == '':
+    async def command_check_item(self, ctx: interactions.SlashContext, items: str = ''):
+        if items == '':
             await ctx.send(database_manager.get_items_by_uid(str(ctx.user)))
         else:
-            await ctx.send(str(database_manager.query_item(str(ctx.user), item)))
+            await ctx.send(str(database_manager.query_item(str(ctx.user), items)))
 
     @module_base.subcommand("del_all", sub_cmd_description="删除全部数据，慎用！")
     @interactions.check(administer_or_allowed_id)
@@ -266,7 +310,8 @@ class Market(interactions.Extension):
         name="item",
         description="产品名称",
         required=True,
-        opt_type=interactions.OptionType.STRING
+        opt_type=interactions.OptionType.STRING,
+        autocomplete=True
     )
     @interactions.slash_option(
         name="num",
@@ -278,7 +323,8 @@ class Market(interactions.Extension):
         name="exchange_item",
         description="交换产品",
         required=True,
-        opt_type=interactions.OptionType.STRING
+        opt_type=interactions.OptionType.STRING,
+        autocomplete=True
     )
     @interactions.slash_option(
         name="exchange_num",
@@ -427,7 +473,8 @@ class SetExchangeItems(interactions.Extension):
         name="item_name",
         description="物品名",
         required=True,
-        opt_type=interactions.OptionType.STRING
+        opt_type=interactions.OptionType.STRING,
+        autocomplete=True
     )
     async def del_item(self, ctx: interactions.SlashContext, item_name: interactions.Role):
         await ctx.send(exchangeable_item.remove_id(item_name))
