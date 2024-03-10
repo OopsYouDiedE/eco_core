@@ -505,7 +505,7 @@ class Gambling(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.STRING,
         choices=[
-            SlashCommandChoice(name="老虎机", value="老虎机")
+            SlashCommandChoice(name="掷骰子", value="掷骰子")
         ]
     )
     @interactions.slash_option(
@@ -553,7 +553,7 @@ class Gambling(interactions.Extension):
         except:
             await ctx.send("查无此单")
             return
-        if types == "投色子":
+        if types == "掷骰子":
             "最大收益四倍，最小收益零。"
             seller_bet = bet * odds
             if database_manager.query_item(seller_id, item)[2] < seller_bet or \
