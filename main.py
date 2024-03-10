@@ -195,7 +195,7 @@ class Core(interactions.Extension):
     @module_base.subcommand("show_item",
                             sub_cmd_description="显示自己某件物品或全部物品数量。")
     @interactions.slash_option(
-        name="items",
+        name="item",
         description="查看的特定物品，不填则为查看全部物品。",
         required=False,
         opt_type=interactions.OptionType.STRING,
@@ -276,7 +276,7 @@ class Market(interactions.Extension):
         description="交换产品",
         required=True,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=False
+        autocomplete=True
     )
     @interactions.slash_option(
         name="exchange_num",
@@ -330,7 +330,7 @@ class Market(interactions.Extension):
             await ctx.send(f"卖家单数不足，只能成交{market_manager.data[sell_id][1]}单。")
             multiple = market_manager.data[sell_id][1]
         sell_num = multiple * num
-        buy_num = multiple * exchange_item
+        buy_num = multiple * exchange_num
         if database_manager.query_item(seller_id, item)[2] < sell_num or \
                 database_manager.query_item(ctx.user, exchange_item)[2] < buy_num:
             await ctx.send("物品不足，无法交易。")
@@ -506,7 +506,7 @@ class Gambling(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.STRING,
         choices=[
-            {"老虎机": "老虎机"}
+          SlashCommandChoice(name="老虎机", value="老虎机")
         ]
     )
     @interactions.slash_option(
@@ -548,7 +548,7 @@ class Gambling(interactions.Extension):
         opt_type=interactions.OptionType.STRING,
         autocomplete=True
     )
-    async def buy_item(self, ctx: interactions.SlashContext, sell_id: str):
+    async def buy_gambling(self, ctx: interactions.SlashContext, sell_id: str):
         try:
             seller_id, types, bet, item, odds = gambling_manager.data[sell_id]
         except:
@@ -582,7 +582,7 @@ auto2 = Core.command_check_item
 auto3 = Market.sell_item
 auto4 = Market.buy_item
 auto5 = Gambling.sell_gambling
-auto6 = Gambling.buy_item
+auto6 = Gambling.buy_gambling
 
 
 @auto1.autocomplete('item')
@@ -590,7 +590,7 @@ auto6 = Gambling.buy_item
 @auto3.autocomplete('item')
 @auto3.autocomplete('exchange_item')
 @auto5.autocomplete('item')
-async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext):
+async def items_option_module_autocomplete(self,ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
     modules: list[str] = list(exchangeable_item.ids)
     modules_auto: list[str] = [
@@ -608,7 +608,7 @@ async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext
 
 
 @auto4.autocomplete('sell_id')
-async def sell_ticket_option_module_autocomplete(ctx: interactions.AutocompleteContext):
+async def sell_ticket_option_module_autocomplete(self,ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
     modules: list[str] = list(market_manager.data.keys())
     modules_auto: list[str] = [
@@ -626,7 +626,7 @@ async def sell_ticket_option_module_autocomplete(ctx: interactions.AutocompleteC
 
 
 @auto6.autocomplete('sell_id')
-async def sell_ticket_option_module_autocomplete(ctx: interactions.AutocompleteContext):
+async def sell_ticket_option_module_autocomplete(self,ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
     modules: list[str] = list(gambling_manager.data.keys())
     modules_auto: list[str] = [
