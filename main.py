@@ -31,14 +31,14 @@ The DEV_GUILD must be set to a specific guild_id
 
 
 async def administer_or_allowed_id(ctx: interactions.BaseContext):
-    async def administer_or_allowed_id(ctx: interactions.BaseContext):
-        res: bool = await interactions.is_owner()(ctx)
-        if os.environ.get("ROLE_ID"):
-            if ctx.author.has_role(os.environ.get("ROLE_ID")): return True
-        if ctx.author.guild_permissions.ADMINISTRATOR: return True
-        IDs: list = id_manager.load_ids()
-        if any(map(ctx.author.has_role, IDs)): return True
-        return False
+    res: bool = await interactions.is_owner()(ctx)
+    if os.environ.get("ROLE_ID"):
+        if ctx.author.has_role(os.environ.get("ROLE_ID")): return True
+    if ctx.author.guild_permissions.ADMINISTRATOR: return True
+    IDs: list = id_manager.load_ids()
+    if any(map(ctx.author.has_role, IDs)): return True
+    return False
+
 
 
 class IDManager:
