@@ -17,6 +17,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import os
+import random
+
 import interactions
 from interactions import AutocompleteContext
 from . import database_manager
@@ -159,7 +161,7 @@ class Core(interactions.Extension):
         description="发送物品",
         required=True,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=True
+        autocomplete=False
     )
     @interactions.slash_option(
         name="quantity",
@@ -191,7 +193,7 @@ class Core(interactions.Extension):
         description="查看的特定物品，不填则为查看全部物品。",
         required=False,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=True
+        autocomplete=False
     )
     async def command_check_item(self, ctx: interactions.SlashContext, items: str = ''):
         if items == '':
@@ -255,7 +257,7 @@ class Market(interactions.Extension):
         description="产品名称",
         required=True,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=True
+        autocomplete=False
     )
     @interactions.slash_option(
         name="num",
@@ -268,7 +270,7 @@ class Market(interactions.Extension):
         description="交换产品",
         required=True,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=True
+        autocomplete=False
     )
     @interactions.slash_option(
         name="exchange_num",
@@ -418,13 +420,13 @@ class SetExchangeItems(interactions.Extension):
         description="物品名",
         required=True,
         opt_type=interactions.OptionType.STRING,
-        autocomplete=True
+        autocomplete=False
     )
     async def del_item(self, ctx: interactions.SlashContext, item_name: interactions.Role):
         await ctx.send(exchangeable_item.remove_id(item_name))
 
 
-import main
+"""import main
 
 
 @main.Core.command_send_item.autocomplete('item')
@@ -445,4 +447,34 @@ async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext
                 "value": i,
             } for i in modules_auto
         ]
+    )"""
+
+
+class Gambling(interactions.Extension):
+    module_base: interactions.SlashCommand = interactions.SlashCommand(
+        name="gambling",
+        description="看看你的运气如何！"
     )
+
+    # 所有人指令：冷却三小时，进行一次风险劳动。
+    @module_base.subcommand("risk_work", sub_cmd_description="看看你的运气，能不能获得更多劳动券！放心，期望是比一高的。")
+    @interactions.cooldown(interactions.Buckets.USER, 1, 3 * 60 * 60)
+    async def risk_work(self, ctx: interactions.SlashContext):
+        # 该命令期望为1.1>1，冷却三小时。构成为 0.3*0+0.4*1+0.2*2+0.1*3=0.4+0.4+0.3
+        if database_manager.query_item(ctx.user, '劳动券')[2] < 3:
+            await ctx.send(f"劳动券不足三个，下次再来吧！")
+
+        database_manager.update_item(ctx.user, '劳动券', -3)
+        luck = random.random()
+        if luck < 0.3:
+            await ctx.send(f"看起来运气有点差，3个劳动券没了~下次或许能捞回来哦~")
+        elif luck < 0.7:
+            database_manager.update_item(ctx.user, '劳动券', 3)
+            await ctx.send(f"嘿咻！看起来，你的劳动券没有变多，也没有变少。")
+
+        elif luck < 0.9:
+            database_manager.update_item(ctx.user, '劳动券', 6)
+            await ctx.send(f"你的运气挺好啊，劳动券翻倍了！")
+        elif luck < 0.9:
+            database_manager.update_item(ctx.user, '劳动券', 9)
+            await ctx.send(f"头奖！你的劳动券翻两番！快去好好炫耀一下吧！")
