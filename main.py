@@ -74,6 +74,37 @@ class IDManager:
         else:
             return '无此id，删除失败'
 
+class KeyValueManager:
+    def __init__(self,filename):
+        self.filename = filename
+        self.data = {}
+
+
+    def save_kvs(self):
+        with open(self.filename, 'w') as f:
+            for key, value in self.data.items():
+                f.write(f'{key}:{value}\n')
+
+    def load_kvs(self):
+        try:
+            with open(self.filename, 'r') as f:
+                for line in f:
+                    key, value = line.strip().split(':')
+                    self.data[key] = value
+        except FileNotFoundError:
+            print("Data file not found, starting with an empty dataset.")
+            self.save_kvs()
+
+    def add_kv(self, key, value):
+        self.data[key] = value
+        self.save_kvs()
+
+    def remove(self, key, value):
+        if key in self.data:
+            self.data.pop(key)
+            self.save_kvs()
+
+# 使用示例
 
 async def administer_or_allowed_id(ctx: interactions.BaseContext):
     res: bool = await interactions.is_owner()(ctx)
@@ -184,8 +215,11 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.STRING
     )
     async def del_all(self, ctx: interactions.SlashContext, key: str):
-        if key == '%DEL_ALL': database_manager.delete_all_data()
-        await ctx.send('您销毁了全部数据库。')
+        if key == '%DEL_ALL':
+            database_manager.delete_all_data()
+            await ctx.send('您销毁了全部数据库。')
+        else:
+            await ctx.send('key错误。这个key在该代码执行处查看。')
 
     @module_base.subcommand("get_all_data", sub_cmd_description="获取所有人和物品记录。")
     @interactions.check(administer_or_allowed_id)
@@ -300,3 +334,39 @@ class Work(interactions.Extension):
             database_manager.update_item(ctx.user, '点赞', -1)
             database_manager.update_item(user_id, '赞许', 1)
             await ctx.send(f"{user_id}收获了您的赞许！")
+
+
+class Banknotes(interactions.Extension):
+    module_base: interactions.SlashCommand = interactions.SlashCommand(
+        name="banknotes",
+        description="满足各位发行货币的需求,只要你有一台印钞机！"
+    )
+
+    # 所有人指令：有印钞机的，尽情发行你的货币吧！
+    @module_base.subcommand("money_printing_machine",
+                            sub_cmd_description="使用印钞机，印刷你的钞票吧！就是不要印成金圆券！")
+    @interactions.slash_option(
+        name="coin_name",
+        description="为你的金币取名！取名规则为某某币，如果名字里没有币，或者coin是不行的！",
+        required=True,
+        opt_type=interactions.OptionType.STRING
+    )
+    @interactions.slash_option(
+        name="denomination",
+        description="这一次的发行",
+        required=True,
+        opt_type=interactions.OptionType.STRING
+    )
+    async def money_printing(self, ctx: interactions.SlashContext,coin_name:str):
+        info = database_manager.query_item(ctx.user, '印钞机')
+        if info[2] <1:
+            await ctx.send(f"您没有印钞机，印不了钱。")
+            return
+        if '金圆券' in coin_name:
+            await ctx.send(f"常凯申，你干的漂亮。")
+            return
+        if ('币' not in coin_name) and ('coin' not in coin_name):
+            await ctx.send(f"名称中必须含有币或coin。")
+            return
+        else:
+
