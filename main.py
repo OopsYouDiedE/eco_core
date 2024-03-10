@@ -21,6 +21,7 @@ import interactions
 from . import database_manager
 from . import market_manager
 import yaml
+import main
 '''
 The DEV_GUILD must be set to a specific guild_id
 '''
