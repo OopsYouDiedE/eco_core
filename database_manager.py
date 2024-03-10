@@ -15,11 +15,14 @@ CREATE TABLE IF NOT EXISTS items (
     PRIMARY KEY (uid, item)
 )
 ''')
-
+conn.close()
 
 # 定义一个函数，修改用户的物品数量
 def update_item(user_id, item, quantity, in_add_mode=True):
     # 查询表中是否存在该用户和物品的记录
+    conn = sqlite3.connect(f'{os.path.dirname(__file__)}/core.db')
+    # 创建游标对象
+    cur = conn.cursor()
     uid = str(user_id)
     cur.execute(
         '''
@@ -53,11 +56,15 @@ def update_item(user_id, item, quantity, in_add_mode=True):
                   ''', (quantity, uid, item))
     # 提交更改
     conn.commit()
+    conn.close()
 
 
 # 定义一个函数，根据用户id查询物品数量和总和
 def query_item(user_id, item):
     uid = str(user_id)
+    conn = sqlite3.connect(f'{os.path.dirname(__file__)}/core.db')
+    # 创建游标对象
+    cur = conn.cursor()
     # 查询表中该用户拥有的所有物品的数量
     cur.execute(
         '''
@@ -70,9 +77,13 @@ def query_item(user_id, item):
         return result
     else:
         return (uid, item, 0)
+    conn.close()
 
 
 def get_items_by_uid(uid: str):
+    conn = sqlite3.connect(f'{os.path.dirname(__file__)}/core.db')
+    # 创建游标对象
+    cur = conn.cursor()
     uid = str(uid)
     # 查询指定uid的所有非零数量物品
     cur.execute('SELECT item, quantity FROM items WHERE uid = ? AND quantity > 0', (uid,))
@@ -80,6 +91,7 @@ def get_items_by_uid(uid: str):
     # 获取查询结果
     items = cur.fetchall()
     return str(items)
+    conn.close()
 
 
 def delete_all_data():
@@ -89,6 +101,7 @@ def delete_all_data():
 
     # 删除所有数据
     cur.execute('DELETE FROM items')
+    conn.close()
 
 
 def get_all_records():
@@ -102,3 +115,4 @@ def get_all_records():
     # 获取查询结果
     records = cur.fetchall()
     return str(records)
+    conn.close()
