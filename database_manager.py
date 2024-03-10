@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 # 连接数据库
 conn = sqlite3.connect(f'{os.path.dirname(__file__)}/core.db')
