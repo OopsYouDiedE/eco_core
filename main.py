@@ -556,7 +556,7 @@ class Gambling(interactions.Extension):
             return
         if types == "掷骰子":
             "最大收益四倍，最小收益零。"
-            seller_bet = bet * odds
+            seller_bet = bet * odds/100
             if database_manager.query_item(seller_id, item)[2] < seller_bet or \
                     database_manager.query_item(ctx.user, item)[2] < bet:
                 await ctx.send("物品不足，无法开赌。")
