@@ -74,37 +74,38 @@ class IDManager:
         else:
             return '无此id，删除失败'
 
+
+import yaml
+
+
 class KeyValueManager:
-    def __init__(self,filename):
-        self.filename = filename
+    def __init__(self, file_path='data.yaml'):
+        self.file_path = file_path
         self.data = {}
 
-
-    def save_kvs(self):
-        with open(self.filename, 'w') as f:
-            for key, value in self.data.items():
-                f.write(f'{key}:{value}\n')
-
-    def load_kvs(self):
+    def load_dict(self):
         try:
-            with open(self.filename, 'r') as f:
-                for line in f:
-                    key, value = line.strip().split(':')
-                    self.data[key] = value
+            with open(self.file_path, 'r') as f:
+                self.data = yaml.safe_load(f) or {}
         except FileNotFoundError:
             print("Data file not found, starting with an empty dataset.")
-            self.save_kvs()
+        return self.data
+
+    def save_dict(self):
+        with open(self.file_path, 'w') as f:
+            yaml.dump(self.data, f)
 
     def add_kv(self, key, value):
         self.data[key] = value
-        self.save_kvs()
+        self.save_dict()
 
-    def remove(self, key, value):
+    def remove_kv(self, key):
         if key in self.data:
-            self.data.pop(key)
-            self.save_kvs()
+            del self.data[key]
+            self.save_dict()
+        else:
+            print("Key not found")
 
-# 使用示例
 
 async def administer_or_allowed_id(ctx: interactions.BaseContext):
     res: bool = await interactions.is_owner()(ctx)
@@ -117,6 +118,10 @@ async def administer_or_allowed_id(ctx: interactions.BaseContext):
 
 
 id_manager = IDManager(f'{os.path.dirname(__file__)}/ids.txt')
+exchangeable_item = IDManager(f'{os.path.dirname(__file__)}/exchangeable_item.txt')
+coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.yaml')
+
+exchangeable_item.add_id('劳动券')
 
 
 class Core(interactions.Extension):
@@ -343,8 +348,8 @@ class Banknotes(interactions.Extension):
     )
 
     # 所有人指令：有印钞机的，尽情发行你的货币吧！
-    @module_base.subcommand("money_printing_machine",
-                            sub_cmd_description="使用印钞机，印刷你的钞票吧！就是不要印成金圆券！")
+    @module_base.subcommand("set_money_printing",
+                            sub_cmd_description="设定你专属发行纸币！")
     @interactions.slash_option(
         name="coin_name",
         description="为你的金币取名！取名规则为某某币，如果名字里没有币，或者coin是不行的！",
@@ -353,20 +358,76 @@ class Banknotes(interactions.Extension):
     )
     @interactions.slash_option(
         name="denomination",
-        description="这一次的发行",
+        description="选择单位面额！每单位消耗一个劳动券与一个赞许。",
+        required=True,
+        opt_type=interactions.OptionType.INTEGER
+    )
+    async def set_money_painting_machine(self, ctx: interactions.SlashContext, coin_name: str, denomination: int):
+        info = database_manager.query_item(ctx.user, '印钞机')
+
+        if info[2] < 1:
+            await ctx.send(f"您没有印钞机，不能做这件事。")
+        elif '金圆券' in coin_name or denomination > 10000000000:
+            await ctx.send(f"常凯申，你干的漂亮。")
+        elif ('币' not in coin_name) and ('coin' not in coin_name):
+            await ctx.send(f"名称中必须含有币或coin。")
+        elif str(ctx.user) in coin_and_owner.load_dict():
+            await ctx.send(f"你已经发行过{coin_and_owner.load_dict()[str(ctx.user)][0]}。")
+        else:
+            await ctx.send(f"成功发行{coin_name}！单位币值为{denomination}！")
+            exchangeable_item.add_id(coin_name)
+            coin_and_owner.add_kv(str(ctx.user), (coin_name, denomination))
+
+    @module_base.subcommand("print_money",
+                            sub_cmd_description="每份消耗一个赞许和一个劳动券")
+    @interactions.slash_option(
+        name="multiple",
+        description="你要发行几份货币?",
+        required=True,
+        opt_type=interactions.OptionType.INTEGER
+    )
+    async def money_printing(self, ctx: interactions.SlashContext, multiple: int):
+        info = database_manager.query_item(ctx.user, '印钞机')
+        if info[2] < 1:
+            await ctx.send("您没有印钞机，不能做这件事。")
+        elif str(ctx.user) not in coin_and_owner.load_dict():
+            await ctx.send("先设置发行纸币，再印钞！")
+        elif database_manager.query_item(ctx.user, '赞许')[2] < multiple or \
+                database_manager.query_item(ctx.user, '劳动券')[2] < multiple:
+            await ctx.send("劳动券或赞许数量不够。")
+        else:
+            coin_name, denomination = coin_and_owner.load_dict()[str(ctx.user)]
+            await ctx.send(f"开始印刷{coin_name}。")
+            database_manager.update_item(ctx.user, '劳动券', -multiple)
+            database_manager.update_item(ctx.user, '赞许', -multiple)
+            database_manager.update_item(ctx.user, coin_name, multiple * denomination)
+            await ctx.send(f"印刷完成，你发行了{multiple * denomination}个货币！")
+
+
+class SetExchangeItems(interactions.Extension):
+    module_base: interactions.SlashCommand = interactions.SlashCommand(
+        name="exchange_items_manager",
+        description="满足设置可交换物品的需求！"
+    )
+
+    @module_base.subcommand("add_item", sub_cmd_description="添加可交换物品。")
+    @interactions.check(administer_or_allowed_id)
+    @interactions.slash_option(
+        name="item_name",
+        description="物品名",
         required=True,
         opt_type=interactions.OptionType.STRING
     )
-    async def money_printing(self, ctx: interactions.SlashContext,coin_name:str):
-        info = database_manager.query_item(ctx.user, '印钞机')
-        if info[2] <1:
-            await ctx.send(f"您没有印钞机，印不了钱。")
-            return
-        if '金圆券' in coin_name:
-            await ctx.send(f"常凯申，你干的漂亮。")
-            return
-        if ('币' not in coin_name) and ('coin' not in coin_name):
-            await ctx.send(f"名称中必须含有币或coin。")
-            return
-        else:
+    async def add_item(self, ctx: interactions.SlashContext, item_name: interactions.Role):
+        await ctx.send(exchangeable_item.add_id(item_name))
 
+    @module_base.subcommand("del_item", sub_cmd_description="移除可交换物品。")
+    @interactions.check(administer_or_allowed_id)
+    @interactions.slash_option(
+        name="item_name",
+        description="物品名",
+        required=True,
+        opt_type=interactions.OptionType.STRING
+    )
+    async def del_item(self, ctx: interactions.SlashContext, item_name: interactions.Role):
+        await ctx.send(exchangeable_item.remove_id(item_name))
