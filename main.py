@@ -22,12 +22,10 @@ from interactions import AutocompleteContext
 from . import database_manager
 from . import market_manager
 import yaml
+
 '''
 The DEV_GUILD must be set to a specific guild_id
 '''
-
-
-
 
 
 # ID管理器类
@@ -64,9 +62,6 @@ class IDManager:
             return f'删除id{id_to_remove}'
         else:
             return '无此id，删除失败'
-
-
-
 
 
 class KeyValueManager:
@@ -115,28 +110,6 @@ coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.ya
 exchangeable_item.add_id('劳动券')
 
 
-
-@Core.command_send_item.autocomplete('item')
-@Core.command_check_item.autocomplete('item')
-@Market.sell_item.autocomplete('item')
-@Market.sell_item.autocomplete('exchange_item')
-async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext):
-    items_option_input: str = ctx.input_text
-    modules: list[str] = list(exchangeable_item.ids)
-    modules_auto: list[str] = [
-        i for i in modules if items_option_input in i
-    ]
-
-    await ctx.send(
-        choices=[
-            {
-                "name": i,
-                "value": i,
-            } for i in modules_auto
-        ]
-    )
-
-
 class Core(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="core",
@@ -165,7 +138,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.NUMBER,
     )
     async def command_give_item(self, ctx: interactions.SlashContext, user_id: str, item: str,
-                                quantity: int = 1):
+                                quantity: int):
         await ctx.send(f"DEBUG:交易前{user_id},有{database_manager.query_item(user_id, item)}个{item}")
         database_manager.update_item(user_id, item, quantity)
 
@@ -184,7 +157,7 @@ class Core(interactions.Extension):
     @interactions.slash_option(
         name="item",
         description="发送物品",
-        required=False,
+        required=True,
         opt_type=interactions.OptionType.STRING,
         autocomplete=True
     )
@@ -449,3 +422,27 @@ class SetExchangeItems(interactions.Extension):
     )
     async def del_item(self, ctx: interactions.SlashContext, item_name: interactions.Role):
         await ctx.send(exchangeable_item.remove_id(item_name))
+
+
+import main
+
+
+@main.Core.command_send_item.autocomplete('item')
+@main.Core.command_check_item.autocomplete('item')
+@main.Market.sell_item.autocomplete('item')
+@main.Market.sell_item.autocomplete('exchange_item')
+async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext):
+    items_option_input: str = ctx.input_text
+    modules: list[str] = list(exchangeable_item.ids)
+    modules_auto: list[str] = [
+        i for i in modules if items_option_input in i
+    ]
+
+    await ctx.send(
+        choices=[
+            {
+                "name": i,
+                "value": i,
+            } for i in modules_auto
+        ]
+    )
