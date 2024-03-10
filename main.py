@@ -16,47 +16,17 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import sqlite3
-import interactions
-from interactions.api.events import MemberRemove, MessageCreate
-from interactions.ext.paginators import Paginator
-from collections import deque
-import asyncio
-import datetime
-from config import DEV_GUILD
-from typing import Optional, Union
-import tempfile
 import os
-import asyncio
-import csv
-
-import aiofiles
-import aiofiles.ospath
-import aiofiles.os
-import aioshutil
-from aiocsv import AsyncReader, AsyncDictReader, AsyncWriter, AsyncDictWriter
-import asyncio
-import aiofiles
-import os
-import sys
-import pathlib
-import tempfile
-
 import interactions
-from interactions.ext import prefixed_commands
-from interactions.ext.prefixed_commands import prefixed_command, PrefixedContext
-from dotenv import load_dotenv
-
+from . import database_manager
+from . import market_manager
+import yaml
 '''
 The DEV_GUILD must be set to a specific guild_id
 '''
-from config import DEBUG, DEV_GUILD
-from src import logutil, compressutil, moduleutil
 
-from typing import Union
-import main
-from . import database_manager
-from . import market_manager
+
+
 
 
 # ID管理器类
@@ -95,7 +65,7 @@ class IDManager:
             return '无此id，删除失败'
 
 
-import yaml
+
 
 
 class KeyValueManager:
