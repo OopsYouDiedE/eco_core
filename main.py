@@ -21,6 +21,7 @@ import random
 
 import interactions
 import yaml
+from interactions import SlashCommandChoice
 
 from . import database_manager
 
@@ -110,7 +111,11 @@ class KeyValueManager:
 
 coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.yaml')
 market_manager = KeyValueManager(f'{os.path.dirname(__file__)}/market_manager.yaml')
+gambling_manager = KeyValueManager(f'{os.path.dirname(__file__)}/gambling_manager.yaml')
 exchangeable_item.add_id('劳动券')
+exchangeable_item.add_id('印钞机')
+exchangeable_item.add_id('交易券')
+exchangeable_item.add_id('卖赌券')
 
 
 class Core(interactions.Extension):
@@ -490,20 +495,140 @@ class Gambling(interactions.Extension):
         elif luck < 0.9:
             database_manager.update_item(ctx.user, '劳动券', 6)
             await ctx.send(f"你的运气挺好啊，劳动券翻倍了！")
-        elif luck < 0.9:
+        else:
             database_manager.update_item(ctx.user, '劳动券', 9)
             await ctx.send(f"头奖！你的劳动券翻两番！快去好好炫耀一下吧！")
+
+    @module_base.subcommand("sell", sub_cmd_description="开您自定义的赌场！")
+    @interactions.slash_option(
+        name="types",
+        description="赌博种类",
+        required=True,
+        opt_type=interactions.OptionType.STRING,
+        choices=[
+            {"老虎机": "老虎机"}
+        ]
+    )
+    @interactions.slash_option(
+        name="bet",
+        description="基础赌注,100以下可能会出现错误。",
+        required=True,
+        opt_type=interactions.OptionType.INTEGER,
+    )
+    @interactions.slash_option(
+        name="item",
+        description="赌博物品",
+        required=True,
+        opt_type=interactions.OptionType.STRING,
+        autocomplete=True
+    )
+    @interactions.slash_option(
+        name="odds",
+        description="赔率，100代表期望为1。",
+        required=True,
+        opt_type=interactions.OptionType.INTEGER,
+    )
+    async def sell_gambling(self, ctx: interactions.SlashContext, types: str, bet: int, item: str,
+                            odds: int):
+        if database_manager.query_item(ctx.user, '卖赌券')[2] < 1:
+            await ctx.send("请先获取一个卖赌券。")
+            return
+        database_manager.update_item(ctx.user, "卖赌券", -1)
+
+        k = (str(ctx.user), types, bet, item, odds)
+        gambling_manager.add_kv(str(k), k)
+        await ctx.send(f"您已经提交订单，以下是该订单的编号。\n{str(k)}")
+
+    @module_base.subcommand("buy",
+                            sub_cmd_description="输入编号，参加赌博。有自动补全。")
+    @interactions.slash_option(
+        name="sell_id",
+        description="售单id",
+        required=True,
+        opt_type=interactions.OptionType.STRING,
+        autocomplete=True
+    )
+    async def buy_item(self, ctx: interactions.SlashContext, sell_id: str):
+        try:
+            seller_id, types, bet, item, odds = gambling_manager.data[sell_id]
+        except:
+            await ctx.send("查无此单")
+            return
+        if types == "投色子":
+            "最大收益四倍，最小收益零。"
+            seller_bet = bet * odds
+            if database_manager.query_item(seller_id, item)[2] < seller_bet or \
+                    database_manager.query_item(ctx.user, item)[2] < bet:
+                await ctx.send("物品不足，无法开赌。")
+                return
+
+            a, b, c, d = [random.randint(0, 100) for _ in range(4)]
+            await ctx.send(f"您掷出了{a},{b}")
+            await ctx.send(f"您的对手掷出了{c},{d}")
+            if a + b > c + d:
+                database_manager.update_item(ctx.user, item, int(seller_bet))
+                database_manager.update_item(seller_id, item, -int(seller_bet))
+                await ctx.send(f"恭喜你！获得了{int(seller_bet)}个{item}！")
+            if a + b == c + d:
+                await ctx.send(f"平局！")
+            if a + b < c + d:
+                database_manager.update_item(ctx.user, item, -int(bet))
+                database_manager.update_item(seller_id, item, int(bet))
+                await ctx.send(f"你输掉了{bet}个{item}。下次再来或许会成功呢。")
 
 
 auto1 = Core.command_send_item
 auto2 = Core.command_check_item
+auto3 = Market.sell_item
+auto4 = Market.buy_item
+auto5 = Gambling.sell_gambling
+auto6 = Gambling.buy_item
 
 
 @auto1.autocomplete('item')
 @auto2.autocomplete('item')
+@auto3.autocomplete('item')
+@auto3.autocomplete('exchange_item')
+@auto5.autocomplete('item')
 async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
     modules: list[str] = list(exchangeable_item.ids)
+    modules_auto: list[str] = [
+        i for i in modules if items_option_input in i
+    ]
+
+    await ctx.send(
+        choices=[
+            {
+                "name": i,
+                "value": i,
+            } for i in modules_auto
+        ]
+    )
+
+
+@auto4.autocomplete('sell_id')
+async def sell_ticket_option_module_autocomplete(ctx: interactions.AutocompleteContext):
+    items_option_input: str = ctx.input_text
+    modules: list[str] = list(market_manager.data.keys())
+    modules_auto: list[str] = [
+        i for i in modules if items_option_input in i
+    ]
+
+    await ctx.send(
+        choices=[
+            {
+                "name": i,
+                "value": i,
+            } for i in modules_auto
+        ]
+    )
+
+
+@auto6.autocomplete('sell_id')
+async def sell_ticket_option_module_autocomplete(ctx: interactions.AutocompleteContext):
+    items_option_input: str = ctx.input_text
+    modules: list[str] = list(gambling_manager.data.keys())
     modules_auto: list[str] = [
         i for i in modules if items_option_input in i
     ]
