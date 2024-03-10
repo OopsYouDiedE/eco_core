@@ -112,10 +112,8 @@ class KeyValueManager:
 coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.yaml')
 market_manager = KeyValueManager(f'{os.path.dirname(__file__)}/market_manager.yaml')
 gambling_manager = KeyValueManager(f'{os.path.dirname(__file__)}/gambling_manager.yaml')
-exchangeable_item.add_id('劳动券')
-exchangeable_item.add_id('印钞机')
-exchangeable_item.add_id('交易券')
-exchangeable_item.add_id('卖赌券')
+exchangeable_item.ids.update(['劳动券', '印钞机', '交易券', '卖赌券'])
+# 合成方式：生成
 
 
 class Core(interactions.Extension):
@@ -202,10 +200,10 @@ class Core(interactions.Extension):
         autocomplete=True
     )
     async def command_check_item(self, ctx: interactions.SlashContext, item: str = ''):
-        if items == '':
+        if item == '':
             await ctx.send(database_manager.get_items_by_uid(str(ctx.user)))
         else:
-            await ctx.send(str(database_manager.query_item(str(ctx.user), items)))
+            await ctx.send(str(database_manager.query_item(str(ctx.user), item)))
 
     @module_base.subcommand("del_all", sub_cmd_description="删除全部数据，慎用！")
     @interactions.check(administer_or_allowed_id)
@@ -506,7 +504,7 @@ class Gambling(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.STRING,
         choices=[
-          SlashCommandChoice(name="老虎机", value="老虎机")
+            SlashCommandChoice(name="老虎机", value="老虎机")
         ]
     )
     @interactions.slash_option(
@@ -590,7 +588,7 @@ auto6 = Gambling.buy_gambling
 @auto3.autocomplete('item')
 @auto3.autocomplete('exchange_item')
 @auto5.autocomplete('item')
-async def items_option_module_autocomplete(self,ctx: interactions.AutocompleteContext):
+async def items_option_module_autocomplete(self, ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
     modules: list[str] = list(exchangeable_item.ids)
     modules_auto: list[str] = [
@@ -608,7 +606,7 @@ async def items_option_module_autocomplete(self,ctx: interactions.AutocompleteCo
 
 
 @auto4.autocomplete('sell_id')
-async def sell_ticket_option_module_autocomplete(self,ctx: interactions.AutocompleteContext):
+async def sell_ticket_option_module_autocomplete(self, ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
     modules: list[str] = list(market_manager.data.keys())
     modules_auto: list[str] = [
@@ -626,7 +624,7 @@ async def sell_ticket_option_module_autocomplete(self,ctx: interactions.Autocomp
 
 
 @auto6.autocomplete('sell_id')
-async def sell_ticket_option_module_autocomplete(self,ctx: interactions.AutocompleteContext):
+async def sell_ticket_option_module_autocomplete(self, ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
     modules: list[str] = list(gambling_manager.data.keys())
     modules_auto: list[str] = [

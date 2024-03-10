@@ -1,3 +1,9 @@
+# my setting
+coin_and_owner.yaml
+gambling_manager.yaml
+market_manager.yaml
+exchangeable_item.txt
+core.db
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
