@@ -1,7 +1,7 @@
 import sqlite3
 
 # 连接数据库
-conn = sqlite3.connect('core.db')
+conn = sqlite3.connect(f'{os.path.dirname(__file__)}/core.db')
 # 创建游标对象
 cur = conn.cursor()
 
