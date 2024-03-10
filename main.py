@@ -70,14 +70,15 @@ class KeyValueManager:
     def __init__(self, file_path='data.yaml'):
         self.file_path = file_path
         self.data = {}
+        self.data=self.load_dict()
 
     def load_dict(self):
         try:
             with open(self.file_path, 'r') as f:
-                self.data = yaml.safe_load(f) or {}
-        except FileNotFoundError:
-            print("Data file not found, starting with an empty dataset.")
-        return self.data
+                return yaml.safe_load(f)
+        except:
+            self.save_dict()
+            return self.data
 
     def save_dict(self):
         with open(self.file_path, 'w') as f:
@@ -364,7 +365,7 @@ class Banknotes(interactions.Extension):
         elif ('币' not in coin_name) and ('coin' not in coin_name):
             await ctx.send(f"名称中必须含有币或coin。")
         elif str(ctx.user) in coin_and_owner.load_dict():
-            await ctx.send(f"你已经发行过{coin_and_owner.load_dict()[str(ctx.user)][0]}。")
+            await ctx.send(f"你已经发行过{coin_and_owner.data[str(ctx.user)][0]}。")
         else:
             await ctx.send(f"成功发行{coin_name}！单位币值为{denomination}！")
             exchangeable_item.add_id(coin_name)
@@ -388,7 +389,7 @@ class Banknotes(interactions.Extension):
                 database_manager.query_item(ctx.user, '劳动券')[2] < multiple:
             await ctx.send("劳动券或赞许数量不够。")
         else:
-            coin_name, denomination = coin_and_owner.load_dict()[str(ctx.user)]
+            coin_name, denomination = coin_and_owner.data[str(ctx.user)]
             await ctx.send(f"开始印刷{coin_name}。")
             database_manager.update_item(ctx.user, '劳动券', -multiple)
             database_manager.update_item(ctx.user, '赞许', -multiple)
