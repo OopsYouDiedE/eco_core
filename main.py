@@ -36,7 +36,7 @@ async def administer_or_allowed_id(ctx: interactions.BaseContext):
         if ctx.author.has_role(os.environ.get("ROLE_ID")): return True
     else:
         if ctx.author.guild_permissions.ADMINISTRATOR: return True
-        if ctx.author.has_role(*tuple(id_manager.load_ids())): return True
+        if ctx.author.has_any_role(*tuple(id_manager.load_ids())): return True
     return False
 
 
