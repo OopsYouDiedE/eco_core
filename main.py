@@ -201,7 +201,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.STRING,
         autocomplete=True
     )
-    async def command_check_item(self, ctx: interactions.SlashContext, items: str = ''):
+    async def command_check_item(self, ctx: interactions.SlashContext, item: str = ''):
         if items == '':
             await ctx.send(database_manager.get_items_by_uid(str(ctx.user)))
         else:
