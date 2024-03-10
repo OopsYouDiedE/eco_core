@@ -84,7 +84,7 @@ def get_items_by_uid(uid: str):
 
 def delete_all_data():
     # 连接到数据库
-    conn = sqlite3.connect('core.db')
+    conn = sqlite3.connect(f'{os.path.dirname(__file__)}/core.db')
     cur = conn.cursor()
 
     # 删除所有数据
@@ -93,7 +93,7 @@ def delete_all_data():
 
 def get_all_records():
     # 连接到数据库
-    conn = sqlite3.connect('core.db')
+    conn = sqlite3.connect(f'{os.path.dirname(__file__)}/core.db')
     cur = conn.cursor()
 
     # 查询所有记录
