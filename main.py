@@ -138,7 +138,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.NUMBER,
     )
     async def command_give_item(self, ctx: interactions.SlashContext, user_id: str, item: str,
-                                quantity: int = 1):
+                                quantity: int):
         await ctx.send(f"DEBUG:交易前{user_id},有{database_manager.query_item(user_id, item)}个{item}")
         database_manager.update_item(user_id, item, quantity)
 
@@ -157,7 +157,7 @@ class Core(interactions.Extension):
     @interactions.slash_option(
         name="item",
         description="发送物品",
-        required=False,
+        required=True,
         opt_type=interactions.OptionType.STRING,
         autocomplete=True
     )
