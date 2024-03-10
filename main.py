@@ -110,31 +110,6 @@ coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.ya
 exchangeable_item.add_id('劳动券')
 
 
-<<<<<<< HEAD
-=======
-
-@Core.command_send_item.autocomplete('item')
-@Core.command_check_item.autocomplete('item')
-@Market.sell_item.autocomplete('item')
-@Market.sell_item.autocomplete('exchange_item')
-async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext):
-    items_option_input: str = ctx.input_text
-    modules: list[str] = list(exchangeable_item.ids)
-    modules_auto: list[str] = [
-        i for i in modules if items_option_input in i
-    ]
-
-    await ctx.send(
-        choices=[
-            {
-                "name": i,
-                "value": i,
-            } for i in modules_auto
-        ]
-    )
-
-
->>>>>>> 81c9e802650a0fb493038cd82c28293bf9d922f9
 class Core(interactions.Extension):
     module_base: interactions.SlashCommand = interactions.SlashCommand(
         name="core",
