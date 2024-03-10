@@ -18,10 +18,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import os
 import interactions
+from interactions import AutocompleteContext
 from . import database_manager
 from . import market_manager
 import yaml
-import main
 '''
 The DEV_GUILD must be set to a specific guild_id
 '''
@@ -113,13 +113,13 @@ exchangeable_item = IDManager(f'{os.path.dirname(__file__)}/exchangeable_item.tx
 coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.yaml')
 
 exchangeable_item.add_id('劳动券')
-from interactions import AutocompleteContext
 
 
-@main.Core.command_send_item.autocomplete('item')
-@main.Core.command_check_item.autocomplete('item')
-@main.Market.sell_item.autocomplete('item')
-@main.Market.sell_item.autocomplete('exchange_item')
+
+@Core.command_send_item.autocomplete('item')
+@Core.command_check_item.autocomplete('item')
+@Market.sell_item.autocomplete('item')
+@Market.sell_item.autocomplete('exchange_item')
 async def items_option_module_autocomplete(ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
     modules: list[str] = list(exchangeable_item.ids)
