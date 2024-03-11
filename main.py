@@ -240,7 +240,7 @@ class Core(interactions.Extension):
         pending_orders.save()
         gambling_orders.save()
         currency_issuance_records.save()
-        await  ctx.send("保存完成")
+        await ctx.send("保存完成")
 
 
 class Market(interactions.Extension):
@@ -438,9 +438,9 @@ class Banknotes(interactions.Extension):
         else:
             coin_name, denomination = currency_issuance_records.data[user_id]
             await ctx.send(f"开始印刷{coin_name}。")
-            currency_issuance_records.change((user_id, '劳动券'), -multiple)
-            currency_issuance_records.change((user_id, '赞许'), -multiple)
-            currency_issuance_records.change((user_id, coin_name), multiple * denomination)
+            item_count_table.change((user_id, '劳动券'), -multiple)
+            item_count_table.change((user_id, '赞许'), -multiple)
+            item_count_table.change((user_id, coin_name), multiple * denomination)
             await ctx.send(f"印刷完成，你发行了{multiple * denomination}个货币！")
 
 
