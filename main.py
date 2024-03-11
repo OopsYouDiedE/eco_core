@@ -41,7 +41,7 @@ class SetManager:
 
     def save(self):
         with open(self.file_path, 'w') as f:
-            yaml.dump(self.data, f)
+            yaml.dump(self.data, f, allow_unicode=True)
 
 
 class DictManager:
@@ -60,7 +60,7 @@ class DictManager:
 
     def save(self):
         with open(self.file_path, 'w') as f:
-            yaml.dump(self.data, f)
+            yaml.dump(self.data, f, allow_unicode=True)
 
     def change(self, k, dv):
         self.data.setdefault(k, 0)
