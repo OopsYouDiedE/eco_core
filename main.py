@@ -20,9 +20,9 @@ import os
 import random
 
 import interactions
-import yaml
 from interactions import SlashCommandChoice
 
+from setting import id_manager, exchangeable_item, coin_and_owner, market_manager, gambling_manager
 from . import database_manager
 
 '''
@@ -40,79 +40,6 @@ async def administer_or_allowed_id(ctx: interactions.BaseContext):
     return False
 
 
-
-class IDManager:
-    def __init__(self, filename):
-        self.filename = filename
-        self.ids = self.load_ids()
-
-    # 从文件中加载ID
-    def load_ids(self):
-        try:
-            with open(self.filename, 'r') as file:
-                return set(file.read().splitlines())
-        except FileNotFoundError:
-            return set()
-
-    # 将ID保存到文件
-    def save_ids(self):
-        with open(self.filename, 'w') as file:
-            file.write('\n'.join(self.ids))
-
-    # 添加新ID
-    def add_id(self, new_id):
-        if new_id not in self.ids:
-            self.ids.add(new_id)
-            self.save_ids()
-        return f'添加id{new_id}'
-
-    # 删除ID
-    def remove_id(self, id_to_remove):
-        if id_to_remove in self.ids:
-            self.ids.remove(id_to_remove)
-            self.save_ids()
-            return f'删除id{id_to_remove}'
-        else:
-            return '无此id，删除失败'
-
-
-id_manager = IDManager(f'{os.path.dirname(__file__)}/ids.txt')
-exchangeable_item = IDManager(f'{os.path.dirname(__file__)}/exchangeable_item.txt')
-
-
-class KeyValueManager:
-    def __init__(self, file_path='data.yaml'):
-        self.file_path = file_path
-        self.data = {}
-        self.data = self.load_dict()
-
-    def load_dict(self):
-        try:
-            with open(self.file_path, 'r') as f:
-                return yaml.safe_load(f)
-        except:
-            self.save_dict()
-            return self.data
-
-    def save_dict(self):
-        with open(self.file_path, 'w') as f:
-            yaml.dump(self.data, f)
-
-    def add_kv(self, key, value):
-        self.data[key] = value
-        self.save_dict()
-
-    def remove_kv(self, key):
-        if key in self.data:
-            del self.data[key]
-            self.save_dict()
-        else:
-            print("Key not found")
-
-
-coin_and_owner = KeyValueManager(f'{os.path.dirname(__file__)}/coin_and_owner.yaml')
-market_manager = KeyValueManager(f'{os.path.dirname(__file__)}/market_manager.yaml')
-gambling_manager = KeyValueManager(f'{os.path.dirname(__file__)}/gambling_manager.yaml')
 exchangeable_item.ids.update(['劳动券', '印钞机', '交易券', '卖赌券'])
 # 合成方式：生成
 
@@ -620,7 +547,7 @@ async def sell_ticket_option_module_autocomplete(self, ctx: interactions.Autocom
             {
                 "name": i,
                 "value": i,
-            } for i in modules_auto
+            } for i in modules_auto if market_manager.data[i][1]>0
         ]
     )
 
