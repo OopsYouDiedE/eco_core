@@ -216,7 +216,7 @@ class Core(interactions.Extension):
         admin_group.data.add(str(role_id.id))
         await ctx.send(f'添加身份组{role_id.id}')
 
-    @module_base.subcommand("save_data", sub_cmd_description="删除管理员身份组。")
+    @module_base.subcommand("del_role", sub_cmd_description="删除管理员身份组。")
     @interactions.check(administer_or_allowed_id)
     @interactions.slash_option(
         name="role_id",
@@ -224,6 +224,11 @@ class Core(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.ROLE
     )
+    async def add_role(self, ctx: interactions.SlashContext, role_id: interactions.Role):
+        admin_group.data.remove(str(role_id.id))
+        await ctx.send(f'删除身份组{role_id.id}')
+    @module_base.subcommand("save_data", sub_cmd_description="保存数据。")
+
     async def save_data(self, ctx: interactions.SlashContext):
         # set类
         admin_group.save()
@@ -451,7 +456,7 @@ class Gambling(interactions.Extension):
     async def risk_work(self, ctx: interactions.SlashContext):
         # 该命令期望为1.1>1，冷却三小时。构成为 0.3*0+0.4*1+0.2*2+0.1*3=0.4+0.4+0.3
         user_id = str(ctx.user)
-        if item_count_table.data[user_id, '劳动券'] < 3:
+        if item_count_table.data.get((user_id, '劳动券'),0) < 3:
             await ctx.send(f"劳动券不足三个，下次再来吧！")
 
         item_count_table.change((user_id, '劳动券'), -3)
