@@ -451,7 +451,7 @@ class Gambling(interactions.Extension):
     async def risk_work(self, ctx: interactions.SlashContext):
         # 该命令期望为1.1>1，冷却三小时。构成为 0.3*0+0.4*1+0.2*2+0.1*3=0.4+0.4+0.3
         user_id = str(ctx.user)
-        if item_count_table.data[user_id, '劳动券'][2] < 3:
+        if item_count_table.data[user_id, '劳动券'] < 3:
             await ctx.send(f"劳动券不足三个，下次再来吧！")
 
         item_count_table.change((user_id, '劳动券'), -3)
