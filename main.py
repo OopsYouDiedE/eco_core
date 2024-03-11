@@ -22,7 +22,7 @@ import random
 import interactions
 from interactions import SlashCommandChoice
 
-from setting import id_manager, exchangeable_item, coin_and_owner, market_manager, gambling_manager
+from . import setting
 from . import database_manager
 
 '''
@@ -35,12 +35,12 @@ async def administer_or_allowed_id(ctx: interactions.BaseContext):
     if os.environ.get("ROLE_ID"):
         if ctx.author.has_role(os.environ.get("ROLE_ID")): return True
     if ctx.author.guild_permissions.ADMINISTRATOR: return True
-    IDs: list = id_manager.load_ids()
+    IDs: list = setting.id_manager.load_ids()
     if any(map(ctx.author.has_role, IDs)): return True
     return False
 
 
-exchangeable_item.ids.update(['劳动券', '印钞机', '交易券', '卖赌券'])
+setting.exchangeable_item.ids.update(['劳动券', '印钞机', '交易券', '卖赌券'])
 # 合成方式：生成
 
 
@@ -162,7 +162,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.ROLE
     )
     async def add_role(self, ctx: interactions.SlashContext, role_id: interactions.Role):
-        await ctx.send(id_manager.add_id(str(role_id.id)))
+        await ctx.send(setting.id_manager.add_id(str(role_id.id)))
 
     @module_base.subcommand("del_role", sub_cmd_description="删除管理员身份组。")
     @interactions.check(administer_or_allowed_id)
@@ -173,7 +173,7 @@ class Core(interactions.Extension):
         opt_type=interactions.OptionType.ROLE
     )
     async def del_role(self, ctx: interactions.SlashContext, role_id: interactions.Role):
-        await ctx.send(id_manager.remove_id(str(role_id.id)))
+        await ctx.send(setting.id_manager.remove_id(str(role_id.id)))
 
 
 class Market(interactions.Extension):
@@ -224,7 +224,7 @@ class Market(interactions.Extension):
         database_manager.update_item(ctx.user, "交易券", -1)
 
         k = (str(ctx.user), item, num, exchange_item, exchange_num)
-        market_manager.add_kv(str(k), [k, max_count])
+        setting.gambling_manager.add_kv(str(k), [k, max_count])
         await ctx.send(f"您已经提交订单，以下是该订单的编号。\n{str(k)}")
 
     # 普通人指令：买产品。
@@ -245,23 +245,23 @@ class Market(interactions.Extension):
     )
     async def buy_item(self, ctx: interactions.SlashContext, sell_id: str, multiple: int):
         try:
-            seller_id, item, num, exchange_item, exchange_num = market_manager.data[sell_id][0]
+            seller_id, item, num, exchange_item, exchange_num = setting.gambling_manager.data[sell_id][0]
         except:
             await ctx.send("查无此单")
             return
         if multiple <= 0:
             await ctx.send(f"必须大于零")
             return
-        if market_manager.data[sell_id][1] < multiple:
-            await ctx.send(f"卖家单数不足，只能成交{market_manager.data[sell_id][1]}单。")
-            multiple = market_manager.data[sell_id][1]
+        if setting.gambling_manager.data[sell_id][1] < multiple:
+            await ctx.send(f"卖家单数不足，只能成交{setting.gambling_manager.data[sell_id][1]}单。")
+            multiple = setting.gambling_manager.data[sell_id][1]
         sell_num = multiple * num
         buy_num = multiple * exchange_num
         if database_manager.query_item(seller_id, item)[2] < sell_num or \
                 database_manager.query_item(ctx.user, exchange_item)[2] < buy_num:
             await ctx.send("物品不足，无法交易。")
             return
-        market_manager.data[sell_id][1]-=multiple
+        setting.gambling_manager.data[sell_id][1]-=multiple
         database_manager.update_item(seller_id, item, -sell_num)
         database_manager.update_item(ctx.user, exchange_item, -buy_num)
         database_manager.update_item(ctx.user, item, sell_num)
@@ -334,12 +334,12 @@ class Banknotes(interactions.Extension):
             await ctx.send(f"常凯申，你干的漂亮。")
         elif ('币' not in coin_name) and ('coin' not in coin_name):
             await ctx.send(f"名称中必须含有币或coin。")
-        elif str(ctx.user) in coin_and_owner.load_dict():
-            await ctx.send(f"你已经发行过{coin_and_owner.data[str(ctx.user)][0]}。")
+        elif str(ctx.user) in setting.coin_and_owner.load_dict():
+            await ctx.send(f"你已经发行过{setting.coin_and_owner.data[str(ctx.user)][0]}。")
         else:
             await ctx.send(f"成功发行{coin_name}！单位币值为{denomination}！")
-            exchangeable_item.add_id(coin_name)
-            coin_and_owner.add_kv(str(ctx.user), (coin_name, denomination))
+            setting.exchangeable_item.add_id(coin_name)
+            setting.coin_and_owner.add_kv(str(ctx.user), (coin_name, denomination))
 
     @module_base.subcommand("print_money",
                             sub_cmd_description="每份消耗一个赞许和一个劳动券")
@@ -353,13 +353,13 @@ class Banknotes(interactions.Extension):
         info = database_manager.query_item(ctx.user, '印钞机')
         if info[2] < 1:
             await ctx.send("您没有印钞机，不能做这件事。")
-        elif str(ctx.user) not in coin_and_owner.load_dict():
+        elif str(ctx.user) not in setting.coin_and_owner.load_dict():
             await ctx.send("先设置发行纸币，再印钞！")
         elif database_manager.query_item(ctx.user, '赞许')[2] < multiple or \
                 database_manager.query_item(ctx.user, '劳动券')[2] < multiple:
             await ctx.send("劳动券或赞许数量不够。")
         else:
-            coin_name, denomination = coin_and_owner.data[str(ctx.user)]
+            coin_name, denomination = setting.coin_and_owner.data[str(ctx.user)]
             await ctx.send(f"开始印刷{coin_name}。")
             database_manager.update_item(ctx.user, '劳动券', -multiple)
             database_manager.update_item(ctx.user, '赞许', -multiple)
@@ -382,7 +382,7 @@ class SetExchangeItems(interactions.Extension):
         opt_type=interactions.OptionType.STRING
     )
     async def add_item(self, ctx: interactions.SlashContext, item_name: interactions.Role):
-        await ctx.send(exchangeable_item.add_id(item_name))
+        await ctx.send(setting.exchangeable_item.add_id(item_name))
 
     @module_base.subcommand("del_item", sub_cmd_description="移除可交换物品。")
     @interactions.check(administer_or_allowed_id)
@@ -394,7 +394,7 @@ class SetExchangeItems(interactions.Extension):
         autocomplete=False
     )
     async def del_item(self, ctx: interactions.SlashContext, item_name: interactions.Role):
-        await ctx.send(exchangeable_item.remove_id(item_name))
+        await ctx.send(setting.exchangeable_item.remove_id(item_name))
 
 
 class Gambling(interactions.Extension):
@@ -463,7 +463,7 @@ class Gambling(interactions.Extension):
         database_manager.update_item(ctx.user, "卖赌券", -1)
 
         k = (str(ctx.user), types, bet, item, odds)
-        gambling_manager.add_kv(str(k), k)
+        setting.gambling_manager.add_kv(str(k), k)
         await ctx.send(f"您已经提交订单，以下是该订单的编号。\n{str(k)}")
 
     @module_base.subcommand("buy",
@@ -477,7 +477,7 @@ class Gambling(interactions.Extension):
     )
     async def buy_gambling(self, ctx: interactions.SlashContext, sell_id: str):
         try:
-            seller_id, types, bet, item, odds = gambling_manager.data[sell_id]
+            seller_id, types, bet, item, odds = setting.gambling_manager.data[sell_id]
         except:
             await ctx.send("查无此单")
             return
@@ -519,7 +519,7 @@ auto6 = Gambling.buy_gambling
 @auto5.autocomplete('item')
 async def items_option_module_autocomplete(self, ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
-    modules: list[str] = list(exchangeable_item.ids)
+    modules: list[str] = list(setting.exchangeable_item.ids)
     modules_auto: list[str] = [
         i for i in modules if items_option_input in i
     ]
@@ -537,7 +537,7 @@ async def items_option_module_autocomplete(self, ctx: interactions.AutocompleteC
 @auto4.autocomplete('sell_id')
 async def sell_ticket_option_module_autocomplete(self, ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
-    modules: list[str] = list(market_manager.data.keys())
+    modules: list[str] = list(setting.gambling_manager.data.keys())
     modules_auto: list[str] = [
         i for i in modules if items_option_input in i
     ]
@@ -547,7 +547,7 @@ async def sell_ticket_option_module_autocomplete(self, ctx: interactions.Autocom
             {
                 "name": i,
                 "value": i,
-            } for i in modules_auto if market_manager.data[i][1]>0
+            } for i in modules_auto if setting.gambling_manager.data[i][1]>0
         ]
     )
 
@@ -555,7 +555,7 @@ async def sell_ticket_option_module_autocomplete(self, ctx: interactions.Autocom
 @auto6.autocomplete('sell_id')
 async def sell_ticket_option_module_autocomplete(self, ctx: interactions.AutocompleteContext):
     items_option_input: str = ctx.input_text
-    modules: list[str] = list(gambling_manager.data.keys())
+    modules: list[str] = list(setting.gambling_manager.data.keys())
     modules_auto: list[str] = [
         i for i in modules if items_option_input in i
     ]
