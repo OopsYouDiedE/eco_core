@@ -216,7 +216,7 @@ class Core(interactions.Extension):
         admin_group.data.add(str(role_id.id))
         await ctx.send(f'添加身份组{role_id.id}')
 
-    @module_base.subcommand("del_role", sub_cmd_description="删除管理员身份组。")
+    @module_base.subcommand("save_data", sub_cmd_description="删除管理员身份组。")
     @interactions.check(administer_or_allowed_id)
     @interactions.slash_option(
         name="role_id",
