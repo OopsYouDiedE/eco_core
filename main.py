@@ -21,6 +21,7 @@ import random
 # 所有内容全都在该文件中处理
 import os
 import time
+
 from asyncio import tasks
 import discord
 from discord.ext import tasks
@@ -102,7 +103,7 @@ item_attributes.data.update({
 })
 
 
-@tasks.loop(minutes=10)
+@tasks.loop(minutes=5)
 async def save():
     admin_group.save()
     not_exchangeable.save()
@@ -113,6 +114,7 @@ async def save():
     pending_orders.save()
     gambling_orders.save()
     currency_issuance_records.save()
+    print('save!',time.time())
 
 
 save.start()
