@@ -405,7 +405,7 @@ class Banknotes(interactions.Extension):
         user_id = str(ctx.user)
         info = item_count_table.data.get((user_id, '印钞机'), 0)
 
-        if info[2] < 1:
+        if info < 1:
             await ctx.send(f"您没有印钞机，不能做这件事。")
         elif '金圆券' in coin_name or denomination > 10000000000:
             await ctx.send(f"常凯申，你干的漂亮。")
@@ -586,7 +586,7 @@ async def sell_ticket_option_module_autocomplete(self, ctx: interactions.Autocom
     items_option_input: str = ctx.input_text
     modules: list[tuple] = list(pending_orders.data.keys())
     modules_auto: list[str] = [
-        str(i) for i in modules if items_option_input in pending_orders.data[i]>0
+        str(i) for i in modules if items_option_input in pending_orders.data and pending_orders.data[i]>0
     ]
 
     await ctx.send(
