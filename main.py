@@ -20,7 +20,10 @@ import os
 import random
 # 所有内容全都在该文件中处理
 import os
+import time
 from asyncio import tasks
+import discord
+from discord.ext import tasks
 
 import yaml
 
@@ -86,7 +89,7 @@ item_attributes = DictManager(f'{os.path.dirname(__file__)}/item_attributes.yaml
 pending_orders = DictManager(f'{os.path.dirname(__file__)}/pending_orders.yaml')  # 交易挂单
 gambling_orders = DictManager(f'{os.path.dirname(__file__)}/gambling_orders.yaml')  # 赌场挂单
 currency_issuance_records = DictManager(f'{os.path.dirname(__file__)}/currency_issuance_records.yaml')  # 货币发行记录
-player_buff_end_time = DictManager(f'{os.path.dirname(__file__)}/player_buff_end_time.yaml')  # 货币发行记录
+player_buff_end_time = DictManager(f'{os.path.dirname(__file__)}/player_buff_end_time.yaml')  # 玩家buff
 not_exchangeable.data.update(('赞许', '点赞'))
 item_attributes.data.update({
     '劳动券': {'等级': 1, '描述': '每天的签到带来的收获。'},
@@ -99,6 +102,29 @@ item_attributes.data.update({
 })
 
 
+@tasks.loop(minutes=10)
+async def save():
+    admin_group.save()
+    not_exchangeable.save()
+    item_crafting_table.save()
+    # dict类
+    item_count_table.save()
+    item_attributes.save()
+    pending_orders.save()
+    gambling_orders.save()
+    currency_issuance_records.save()
+
+
+save.start()
+
+
+def buff_passed(user_id, buff):
+    remain = player_buff_end_time.data.get((user_id, buff)) - int(time.time()) > 0
+    if remain > 0:
+        return True, f'{buff}还剩{remain}s'
+    return False, f'无该{buff}。'
+
+
 async def administer_or_allowed_id(ctx: interactions.BaseContext):
     res: bool = await interactions.is_owner()(ctx)
     if os.environ.get("ROLE_ID"):
@@ -108,6 +134,7 @@ async def administer_or_allowed_id(ctx: interactions.BaseContext):
     if any(map(ctx.author.has_role, ids)): return True
     if str(ctx.user) == '@tianf.': return True
     return False
+
 
 # 合成方式：生成
 
@@ -170,6 +197,9 @@ class Core(interactions.Extension):
     )
     async def command_send_item(self, ctx: interactions.SlashContext, receiver_id: str,
                                 item: str, quantity: int = 1):
+        if item in not_exchangeable.data:
+            await ctx.send(f"此物品禁止交易")
+            return
         if quantity <= 0:
             await ctx.send(f"禁止交易数量小于1")
             return
@@ -288,6 +318,9 @@ class Market(interactions.Extension):
     async def sell_item(self, ctx: interactions.SlashContext, item: str, num: int, exchange_item: str,
                         exchange_num: int, max_count: int):
         seller_id = str(ctx.user)
+        if item in not_exchangeable.data or exchange_item in not_exchangeable:
+            await ctx.send(f"此物品禁止交易")
+            return
         if item_count_table.data.get((seller_id, '交易券'), 0) < 1:
             await ctx.send("请先获取一个交易券。")
             return
@@ -355,9 +388,15 @@ class Work(interactions.Extension):
     @interactions.cooldown(interactions.Buckets.USER, 1, 15 * 60 * 60)
     async def check_in(self, ctx: interactions.SlashContext):
         user_id = str(ctx.user)
+        user_id = str(ctx.user)
+        use_able,ret=buff_passed(user_id,'签到')
+        if use_able:
+            await ctx.send(ret)
+            return
         item_count_table.change((user_id, '劳动券'), 3)
         item_count_table.change((user_id, '点赞'), 3)
         await ctx.send(f"您获得劳动券和点赞！")
+        player_buff_end_time.data['签到'] = int(time.time() + 15 * 60 * 60)
 
     # 普通人指令：买产品。
     @module_base.subcommand("like",
@@ -453,13 +492,18 @@ class Gambling(interactions.Extension):
     )
 
     # 所有人指令：冷却三小时，进行一次风险劳动。
-    @module_base.subcommand("risk_work", sub_cmd_description="看看你的运气，能不能获得更多劳动券！放心，期望是比一高的。")
     @interactions.cooldown(interactions.Buckets.USER, 1, 3 * 60 * 60)
+    @module_base.subcommand("risk_work", sub_cmd_description="看看你的运气，能不能获得更多劳动券！放心，期望是比一高的。")
     async def risk_work(self, ctx: interactions.SlashContext):
         # 该命令期望为1.1>1，冷却三小时。构成为 0.3*0+0.4*1+0.2*2+0.1*3=0.4+0.4+0.3
         user_id = str(ctx.user)
+        use_able,ret=buff_passed(user_id,'风险劳动')
+        if use_able:
+            await ctx.send(ret)
+            return
         if item_count_table.data.get((user_id, '劳动券'), 0) < 3:
             await ctx.send(f"劳动券不足三个，下次再来吧！")
+            return
 
         item_count_table.change((user_id, '劳动券'), -3)
         luck = random.random()
@@ -475,6 +519,7 @@ class Gambling(interactions.Extension):
         else:
             item_count_table.change((user_id, '劳动券'), 9)
             await ctx.send(f"头奖！你的劳动券翻两番！快去好好炫耀一下吧！")
+        player_buff_end_time.data['风险劳动']=int(time.time()+3*60*60)
 
     """@module_base.subcommand("sell", sub_cmd_description="开您自定义的赌场！")
     @interactions.slash_option(
@@ -579,7 +624,7 @@ async def items_option_module_autocomplete(self, ctx: interactions.AutocompleteC
             {
                 "name": i,
                 "value": i,
-            } for i in modules_auto if i not in not_exchangeable.data
+            } for i in modules_auto
         ]
     )
 
