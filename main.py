@@ -240,7 +240,7 @@ class Core(interactions.Extension):
         pending_orders.save()
         gambling_orders.save()
         currency_issuance_records.save()
-        await ctx.send("保存完成")
+         ctx.send("保存完成")
 
 
 class Market(interactions.Extension):
