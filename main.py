@@ -47,6 +47,10 @@ class SetManager:
         with open(self.file_path, 'w') as f:
             yaml.dump(self.data, f, allow_unicode=True)
 
+    async def asave(self):
+        async with aiofiles.open(self.file_path, 'w') as f:
+            yaml.dump(self.data, f, allow_unicode=True)
+
 
 class DictManager:
     def __init__(self, file_path: str):
@@ -70,6 +74,9 @@ class DictManager:
         self.data.setdefault(k, 0)
         self.data[k] += dv
 
+    async def asave(self):
+        async with aiofiles.open(self.file_path, 'w') as f:
+            yaml.dump(self.data, f, allow_unicode=True)
 
 import interactions
 from interactions import SlashCommandChoice
@@ -102,19 +109,27 @@ item_attributes.data.update({
     '印钞机': {'等级': 5, '描述': '一种神奇的只要投入少量努力就能无限印钞的机器。'}
 })
 
+import aiofiles
+
+
+async def read_file():
+    async with aiofiles.open('test.txt', mode='r') as f:
+        content = await f.read()
+        print(content)
+
 
 @tasks.loop(minutes=5)
 async def save():
-    admin_group.save()
-    not_exchangeable.save()
-    item_crafting_table.save()
+    await admin_group.asave()
+    await not_exchangeable.asave()
+    await item_crafting_table.asave()
     # dict类
-    item_count_table.save()
-    item_attributes.save()
-    pending_orders.save()
-    gambling_orders.save()
-    currency_issuance_records.save()
-    print('save!',time.time())
+    await item_count_table.asave()
+    await item_attributes.asave()
+    await pending_orders.asave()
+    await gambling_orders.asave()
+    await currency_issuance_records.asave()
+    print('save!', time.time())
 
 
 save.start()
@@ -391,7 +406,7 @@ class Work(interactions.Extension):
     async def check_in(self, ctx: interactions.SlashContext):
         user_id = str(ctx.user)
         user_id = str(ctx.user)
-        use_able,ret=buff_passed(user_id,'签到')
+        use_able, ret = buff_passed(user_id, '签到')
         if use_able:
             await ctx.send(ret)
             return
@@ -499,7 +514,7 @@ class Gambling(interactions.Extension):
     async def risk_work(self, ctx: interactions.SlashContext):
         # 该命令期望为1.1>1，冷却三小时。构成为 0.3*0+0.4*1+0.2*2+0.1*3=0.4+0.4+0.3
         user_id = str(ctx.user)
-        use_able,ret=buff_passed(user_id,'风险劳动')
+        use_able, ret = buff_passed(user_id, '风险劳动')
         if use_able:
             await ctx.send(ret)
             return
@@ -521,7 +536,7 @@ class Gambling(interactions.Extension):
         else:
             item_count_table.change((user_id, '劳动券'), 9)
             await ctx.send(f"头奖！你的劳动券翻两番！快去好好炫耀一下吧！")
-        player_buff_end_time.data['风险劳动']=int(time.time()+3*60*60)
+        player_buff_end_time.data['风险劳动'] = int(time.time() + 3 * 60 * 60)
 
     """@module_base.subcommand("sell", sub_cmd_description="开您自定义的赌场！")
     @interactions.slash_option(
@@ -649,19 +664,3 @@ async def sell_ticket_option_module_autocomplete(self, ctx: interactions.Autocom
     )
 
 
-"""@auto6.autocomplete('sell_id')
-async def sell_ticket_option_module_autocomplete(self, ctx: interactions.AutocompleteContext):
-    items_option_input: str = ctx.input_text
-    modules: list[str] = list(dataset.gambling_manager.data.keys())
-    modules_auto: list[str] = [
-        i for i in modules if items_option_input in i
-    ]
-
-    await ctx.send(
-        choices=[
-            {
-                "name": i,
-                "value": i,
-            } for i in modules_auto
-        ]
-    )"""
