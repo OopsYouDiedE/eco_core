@@ -76,7 +76,9 @@ class DictManager:
 
     async def asave(self):
         async with aiofiles.open(self.file_path, 'w') as f:
-            yaml.dump(self.data, f, allow_unicode=True)
+            yaml_data = yaml.dump(self.data, allow_unicode=True)
+            await f.write(yaml_data)
+
 
 import interactions
 from interactions import SlashCommandChoice
@@ -662,5 +664,3 @@ async def sell_ticket_option_module_autocomplete(self, ctx: interactions.Autocom
             } for i in modules_auto
         ]
     )
-
-
